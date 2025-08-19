@@ -1,0 +1,82 @@
+<div id="mode-selection-area">
+  <h3>請選擇 1A2B 遊戲模式</h3>
+  <div id="mode-buttons">
+    <button id="play-vs-player-btn" class="mode-select-btn" data-mode="multiplayer">
+      <h4>即時對戰</h4>
+      <span>與另一位玩家連線對戰</span>
+    </button>
+    <button id="play-vs-computer-btn" class="mode-select-btn" data-mode="single">
+      <h4>對戰電腦</h4>
+      <span>與電腦進行一場快速對決</span>
+    </button>
+  </div>
+  <button id="return-to-lobby-from-mode-select">返回大廳</button>
+</div>
+
+
+<div id="room-info" class="hidden">
+    <h2>房間資訊</h2>
+    <p>房間號碼: <span id="room-id-display">N/A</span></p>
+    <p id="room-status-message">等待玩家...</p>
+    <button id="cancel-room-button" class="hidden">取消並返回</button>
+    <div id="set-secret-area" class="hidden">
+        <input type="text" id="secret-number-input" placeholder="設定您的4位祕密數字" maxlength="4" />
+        <button id="set-secret-button">設定祕密數字並準備</button>
+    </div>
+
+    <div id="join-request-overlay" class="hidden"> 
+        <div id="join-requests-area">
+            <h3>加入請求</h3>
+            <ul id="join-requests-list"></ul>
+        </div>
+    </div>
+
+</div>
+
+<div id="main-game-content" class="hidden">
+  <div id="game-action-section">
+    <h2 id="game-main-title">1A2B 即時對戰</h2>
+    <h3 id="game-turn-title">輪到 XXX 猜了！</h3>
+    <div class="guess-action-area">
+      <input type="text" id="guess-input" placeholder="輸入您的4位猜測" maxlength="4" />
+      <button id="submit-guess-button">提交猜測</button>
+    </div>
+  </div>
+
+  <div id="game-details-section">
+    <div id="left-panel" class="game-panel">
+      <h3>對手猜測歷史：</h3>
+      <div id="my-secret-display-area" class="hidden">
+        <h4>您出給對手的題目：<span id="my-secret-number-is">----</span></h4>
+      </div>
+      <ul id="opponent-guess-history"></ul>
+    </div>
+    <div id="center-history-panel" class="game-panel">
+      <h3>您的猜測歷史：</h3>
+      <ul id="my-guess-history"></ul>
+    </div>
+    <div id="chat-panel" class="game-panel">
+      <h3>聊天室</h3>
+      <div id="chat-messages"></div>
+      <div class="chat-input-area">
+        <input type="text" id="chat-input" placeholder="輸入訊息..." maxlength="50" />
+        <button id="send-chat-button">發送</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="game-over-screen" class="hidden">
+  <h2 id="game-over-title">遊戲結束！</h2>
+  <p id="winner-message"></p>
+  <div id="secrets-reveal-area">
+    <p id="my-final-secret-reveal"></p>
+    <p id="opponent-final-secret-reveal"></p>
+  </div>
+  <hr />
+  <div class="game-over-actions">
+      <button id="play-again-button">再玩一局</button>
+      <button id="return-to-menu-button">返回主選單</button>
+  </div>
+  <p id="rematch-status" class="hidden"></p>
+</div>

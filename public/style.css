@@ -1,0 +1,258 @@
+:root {
+  --bg-main: #fee9ca;
+  --bg-container: #ffffff;
+  --bg-panel: #faf8f2;
+  --text-primary: #5d534a;
+  --text-secondary: #757575;
+  --text-light: #a99a8d;
+  --color-accent: #c0b2a3;
+  --color-accent-hover: #a99a8d;
+  --color-primary-btn: #5d534a;
+  --color-primary-btn-hover: #4e342e;
+  --color-disabled: #d3c9bc;
+  --border-color: #d3c9bc;
+}
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "Noto Sans TC", sans-serif;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center; 
+  background-color: var(--bg-main);
+  padding: 15px;
+  box-sizing: border-box;
+}
+.container {
+  background-color: var(--bg-container);
+  padding: 20px 40px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  text-align: center;
+  width: 100%;
+  max-width: 1100px;
+  min-height: calc(100vh - 30px);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  max-width: 1100px;
+  min-width: 1000px;
+}
+h1 {
+  color: #2c3e50;
+  margin-bottom: 5px;
+  font-size: 1.8em;
+}
+h2 {
+  color: #34495e;
+  margin-top: 20px;
+  margin-bottom: 15px;
+  font-size: 1.5em;
+}
+h3 {
+  color: var(--text-primary);
+  margin-top: 15px;
+  margin-bottom: 10px;
+  font-size: 1.1em;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 5px;
+}
+input[type="text"] {
+  padding: 12px 15px;
+  margin: 8px 0;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 1em;
+  background-color: #fff;
+}
+input[type="text"]:focus {
+  border-color: var(--color-accent);
+  outline: none;
+  box-shadow: 0 0 5px rgba(192, 178, 163, 0.5);
+}
+button {
+  padding: 10px 20px;
+  margin: 10px 5px;
+  background-color: var(--color-accent);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1em;
+  font-weight: bold;
+  transition: background-color 0.2s, transform 0.1s;
+}
+button:hover {
+  background-color: var(--color-accent-hover);
+  transform: translateY(-1px);
+}
+#confirm-name-button,
+#modal-confirm-btn {
+  background-color: var(--color-primary-btn);
+}
+#confirm-name-button:hover,
+#modal-confirm-btn:hover {
+  background-color: var(--color-primary-btn-hover);
+}
+button:disabled {
+  background-color: var(--color-disabled);
+  cursor: not-allowed;
+  opacity: 0.8;
+  transform: none;
+}
+hr {
+  margin: 25px 0;
+  border: 0;
+  border-top: 1px solid var(--border-color);
+}
+.hidden {
+  display: none !important;
+}
+#login-screen {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  flex-grow: 1;
+}
+#player-setup-area {
+  width: 100%;
+  max-width: 400px;
+}
+#player-info-display {
+  position: absolute;
+  top: 20px;
+  right: 40px;
+  background-color: var(--text-primary);
+  color: white;
+  padding: 8px 15px;
+  border-radius: 20px;
+  font-size: 0.9em;
+  font-weight: bold;
+  z-index: 100;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+#custom-modal-overlay,
+#alert-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+#custom-modal,
+#alert-modal {
+  background-color: var(--bg-container);
+  padding: 25px 30px;
+  border-radius: 12px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  width: 90%;
+  max-width: 400px;
+  text-align: center;
+}
+#custom-modal {
+  border-top: 5px solid var(--text-primary);
+}
+#alert-modal {
+  border-top: 5px solid var(--color-primary-btn-hover);
+}
+#custom-modal h3,
+#alert-modal h3 {
+  margin-top: 0;
+  color: var(--text-primary);
+  border-bottom: none;
+}
+#custom-modal p,
+#alert-modal p {
+  color: var(--text-secondary);
+  margin: 15px 0 25px 0;
+  line-height: 1.6;
+}
+#modal-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+#modal-cancel-btn {
+  background-color: #a1a1a1;
+}
+#modal-cancel-btn:hover {
+  background-color: #888888;
+}
+#alert-ok-btn {
+  min-width: 100px;
+}
+.input-error {
+  border-color: #dc3545;
+  animation: shake 0.5s;
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+#orientation-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: var(--bg-main);
+  z-index: 9999;
+  justify-content: center;
+  align-items: center;
+}
+.orientation-message {
+  text-align: center;
+  color: var(--text-primary);
+  font-size: 1.1em;
+  font-weight: 500;
+  padding: 20px;
+}
+.orientation-message svg {
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+  animation: rotate-anim 2.5s infinite linear;
+}
+@keyframes rotate-anim {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@media screen and (orientation: portrait) {
+  .container {
+    display: none !important;
+  }
+  #orientation-overlay {
+    display: flex;
+  }
+}
+
+/* 為了防止使用者選取按鈕文字，讓點擊體驗更好 */
+button,
+.number,
+.control-key,
+.mode-select-btn,
+.difficulty-btn,
+.in-game-tab-button,
+.tab-button {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}

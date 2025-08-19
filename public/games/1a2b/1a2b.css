@@ -1,0 +1,347 @@
+:root {
+  --theme-color-main: #a69cac;      /* 主題粉紫 (用於按鈕、標題) */
+  --theme-color-dark: #58355E;      /* 深紫 (用於重要文字) */
+  --theme-color-light: #e4d9ff;     /* 淺粉紫 (用於背景、邊框) */
+  --theme-color-highlight: #f5c2e7; /* 高亮粉色 (用於 hover 或提示) */
+  --color-success: #78c850;         /* 成功色 (綠) */
+  --color-danger: #f08030;          /* 危險/拒絕色 (橘紅) */
+  --color-info: #6890f0;            /* 資訊色 (藍) */
+  --bg-color-main: #fbfaff;         /* 主背景色 (非常淺的粉紫) */
+  --panel-bg: #ffffff;             /* 面板背景色 (白色) */
+  --text-color-primary: #4e4555;    /* 主要文字顏色 */
+  --text-color-secondary: #8e829b;  /* 次要文字顏色 */
+  --border-color: #dcd3e8;         /* 邊框顏色 */
+}
+
+/* --- 2. 模式選擇畫面 (借用數獨風格) --- */
+#mode-selection-area {
+  max-width: 600px;
+  margin: 40px auto;
+  text-align: center;
+  padding: 30px;
+  background-color: var(--panel-bg);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+#mode-selection-area h3 {
+  color: var(--theme-color-dark);
+  margin: 0 0 30px 0;
+}
+#mode-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+.mode-select-btn {
+  flex: 1;
+  padding: 15px;
+  border-radius: 10px;
+  border: 2px solid var(--border-color);
+  background-color: var(--bg-color-main);
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  text-align: left;
+}
+.mode-select-btn:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.08);
+  border-color: var(--theme-color-main);
+}
+.mode-select-btn h4 {
+  margin: 0 0 5px 0;
+  font-size: 1.2em;
+  color: var(--theme-color-dark);
+}
+.mode-select-btn span {
+  font-size: 0.9em;
+  color: var(--text-color-secondary);
+}
+#return-to-lobby-from-mode-select {
+  margin-top: 30px;
+  background-color: var(--text-color-secondary);
+  border: none;
+  color: white;
+  padding: 8px 18px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* --- 3. 遊戲通用 & 初始設定 --- */
+#room-info button,
+#game-over-screen button,
+#main-game-content button,
+#set-secret-button {
+  border: none;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  font-size: 1em;
+  font-weight: 500;
+  background-color: var(--theme-color-main);
+}
+#room-info button:hover,
+#game-over-screen button:hover,
+#main-game-content button:hover,
+#set-secret-button:hover {
+  opacity: 0.85;
+}
+
+/* 按鈕顏色區分 */
+#cancel-room-button,
+.reject-join-btn {
+  background-color: var(--color-danger) !important;
+}
+.accept-join-btn {
+  background-color: var(--color-success) !important;
+}
+#return-to-menu-button {
+  background-color: var(--text-color-secondary);
+}
+#play-again-button {
+  background-color: var(--color-info);
+}
+
+/* 輸入框樣式 */
+#main-game-content input,
+#secret-number-input,
+#chat-input {
+    border: 1px solid var(--border-color);
+    padding: 10px;
+    border-radius: 8px;
+    background-color: var(--bg-color-main);
+    color: var(--text-color-primary);
+    transition: all 0.2s;
+}
+#main-game-content input:focus,
+#secret-number-input:focus,
+#chat-input:focus {
+    border-color: var(--theme-color-main);
+    box-shadow: 0 0 5px var(--theme-color-light);
+    outline: none;
+}
+
+/* --- 4. 等待畫面 & 加入請求 --- */
+#room-info {
+  text-align: center;
+  color: var(--text-color-primary);
+}
+#join-requests-area {
+  margin-top: 20px;
+  padding: 15px;
+  background: var(--bg-color-main);
+  border-radius: 8px;
+}
+#join-requests-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 8px;
+  border-bottom: 1px solid var(--border-color);
+  gap: 15px;
+}
+#join-requests-list li:last-child {
+  border-bottom: none;
+}
+.countdown-timer {
+  color: var(--text-color-secondary);
+  font-size: 0.9em;
+  min-width: 80px;
+  text-align: left;
+}
+.join-request-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* --- 5. 主要遊戲畫面 --- */
+#game-action-section {
+  text-align: center;
+  margin-bottom: 20px;
+}
+#game-main-title {
+  color: var(--theme-color-dark);
+  margin: 0 0 5px 0;
+}
+#game-turn-title {
+  margin: 0 0 15px 0;
+  color: var(--theme-color-dark);
+  font-size: 1.5em;
+  min-height: 48px;
+}
+.guess-action-area {
+  display: flex;
+  max-width: 350px;
+  margin: 0 auto;
+  gap: 10px;
+}
+.guess-action-area input {
+  flex-grow: 1;
+}
+
+#game-details-section {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+/* 遊戲面板通用樣式 (參考數獨) */
+.game-panel {
+  flex: 1;
+  padding: 20px;
+  border-radius: 12px;
+  background-color: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+#center-history-panel {
+  flex: 1.2;
+}
+.game-panel h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  text-align: center;
+  font-size: 1.2em;
+  color: var(--theme-color-dark);
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-color);
+}
+#opponent-guess-history,
+#my-guess-history {
+  list-style-type: none;
+  padding: 10px;
+  margin: 0;
+  background-color: var(--bg-color-main);
+  border-radius: 6px;
+  overflow-y: auto;
+  max-height: 280px;
+  color: var(--text-color-primary);
+}
+#my-secret-display-area {
+  background-color: var(--theme-color-light);
+  color: var(--theme-color-dark);
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  text-align: center;
+  border: 1px solid var(--border-color);
+}
+#my-secret-display-area h4 {
+  margin: 0;
+  font-weight: 500;
+}
+
+/* --- 6. 聊天室 --- */
+#chat-panel .chat-input-area {
+  display: flex;
+  gap: 8px;
+  margin-top: 15px;
+}
+#chat-panel .chat-input-area input {
+  flex-grow: 1;
+}
+#chat-messages {
+  list-style: none;
+  padding: 10px;
+  margin: 0;
+  background-color: var(--bg-color-main);
+  border-radius: 6px;
+  overflow-y: auto;
+  flex-grow: 1; /* 讓聊天室填滿空間 */
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 180px; /* 或根據你的佈局調整 */
+}
+#chat-messages .chat-message {
+  padding: 8px 12px;
+  border-radius: 18px;
+  max-width: 85%;
+  line-height: 1.4;
+  word-wrap: break-word;
+}
+#chat-messages .my-message {
+  align-self: flex-end;
+  background-color: var(--theme-color-main);
+  color: white;
+}
+#chat-messages .opponent-message {
+  align-self: flex-start;
+  background-color: #e9e4f0;
+  color: var(--text-color-primary);
+}
+
+/* --- 7. 遊戲結束畫面 --- */
+#game-over-screen {
+  text-align: center;
+  padding: 20px;
+}
+#winner-message {
+  font-weight: bold;
+  font-size: 1.3em;
+  color: var(--theme-color-dark);
+}
+#secrets-reveal-area {
+  margin: 15px 0;
+  color: var(--text-color-secondary);
+}
+.game-over-actions {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+#rematch-status {
+  margin-top: 15px;
+  color: var(--color-info);
+  font-weight: bold;
+}
+
+/* --- 8. 其他 & 響應式 --- */
+.hidden {
+  display: none !important;
+}
+.input-error {
+  border-color: var(--color-danger);
+  animation: shake 0.5s;
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+@media screen and (max-width: 900px) {
+  #game-details-section {
+    flex-direction: column;
+  }
+}
+
+#join-request-overlay {
+  position: fixed; /* 固定在視窗上 */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(60, 40, 70, 0.5); /* 粉紫色的半透明背景 */
+  backdrop-filter: blur(5px); /* 背景模糊魔法！ */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+#join-requests-area {
+  background-color: var(--panel-bg); /* 跟其他面板一樣用白色背景 */
+  padding: 25px 30px;
+  border-radius: 12px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  width: 90%;
+  max-width: 420px;
+  text-align: center;
+  margin-top: 0; /* 覆蓋掉舊的 margin */
+}

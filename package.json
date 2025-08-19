@@ -1,0 +1,13 @@
+{
+  "name": "game-platform",
+  "version": "1.0.0",
+  "description": "A multi-game platform",
+  "main": "server/main_server.js",
+  "scripts": {
+    "start": "powershell -ExecutionPolicy Bypass -File ./start-server.ps1"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.4"
+  }
+}

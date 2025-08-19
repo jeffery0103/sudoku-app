@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>俄羅斯方塊 Tetris</title>
+    <link rel="stylesheet" href="tetris.css" />
+  </head>
+  <body>
+    <div id="game-container">
+      <h1>俄羅斯方塊</h1>
+      <canvas id="game-canvas"></canvas>
+      <div id="game-info">
+        <p>分數: <span id="score">0</span></p>
+        <p>等級: <span id="level">1</span></p>
+        <p>行數: <span id="lines">0</span></p>
+        <div id="next-tetromino">
+          <p>下一個</p>
+          <canvas id="next-canvas"></canvas>
+        </div>
+      </div>
+      <button id="start-button">開始遊戲</button>
+      <button id="pause-button">暫停</button>
+    </div>
+
+    <div id="game-over-modal" class="hidden">
+      <h2>遊戲結束</h2>
+      <p>你的分數: <span id="final-score">0</span></p>
+      <button id="restart-button">重新開始</button>
+      <button id="back-to-lobby-button">返回大廳</button>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="tetris.js"></script>
+  </body>
+</html>
