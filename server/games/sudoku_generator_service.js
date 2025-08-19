@@ -17,7 +17,7 @@ function generatePuzzleParallel(difficulty, onProgress = () => {}, onDispatch = 
         let bestResult = { holes: -1 };
         for (let i = 0; i < attempts; i++) {
             const solved = sudokuGame.generateSolvedBoard();
-            const targetHoles = { easy: 38, medium: 50, hard: 57 }[difficulty] || 50;
+            const targetHoles = { easy: 1, medium: 50, hard: 57 }[difficulty] || 50;
             const currentResult = sudokuGame.digToTargetWithOptionalBlackout(solved, targetHoles);
             if (currentResult.holes > bestResult.holes) {
                 bestResult = { ...currentResult, solution: solved };
