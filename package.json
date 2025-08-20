@@ -2,16 +2,32 @@
   "name": "game-platform",
   "version": "1.0.0",
   "description": "A multi-game platform",
-  "main": "main.js", 
+  "main": "main.js",
   "scripts": {
     "start": "node server/main_server.js",
-    "electron": "electron ." 
+    "electron": "electron .",
+    "pack": "electron-builder" 
   },
   "dependencies": {
     "express": "^4.18.2",
     "socket.io": "^4.7.4"
   },
-  "devDependencies": { 
-    "electron": "^..." 
+  "devDependencies": {
+  "electron": "^31.0.0",
+  "electron-builder": "^24.13.3"
+ },
+  "build": {
+    "appId": "com.jeffery.sudokuapp",
+    "productName": "Sudoku Game",
+    "files": [
+      "main.js",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "portable"
+    }
   }
 }

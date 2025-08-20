@@ -59,6 +59,97 @@ function broadcastFullPlayerState(io, room) {
     io.to(room.id).emit('sudoku_full_state_update', fullState);
 }
 
+/**
+ * 統一處理數獨遊戲的設定與啟動流程
+ * @param {object} io - Socket.IO 伺服器實例
+ * @param {object} rooms - 全域的房間狀態物件
+ * @param {object} activeSudokuGames - 儲存活躍遊戲解答的物件
+ * @param {object} room - 當前要設定的房間物件
+ * @param {object} puzzleResult - 包含 puzzle, solution, holes, difficulty 的謎題結果物件
+ */
+function setupSudokuGame(io, rooms, activeSudokuGames, room, puzzleResult) {
+  // --- 安全檢查 ---
+  if (!io || !room || !puzzleResult || !puzzleResult.puzzle || !puzzleResult.solution) {
+    console.error(`[伺服器錯誤] setupSudokuGame 缺少必要參數，無法啟動遊戲。房間ID: ${room?.id}`);
+    // 可以考慮向該房間發送一個錯誤通知
+    if (room) {
+      io.to(room.id).emit('game_creation_error', { message: '伺服器內部錯誤，建立遊戲失敗。' });
+    }
+    return;
+  }
+
+  const { puzzle, solution, holes, difficulty } = puzzleResult;
+
+  // --- 1. 更新房間狀態 ---
+  room.status = 'playing'; // 將房間狀態從 'waiting' 改為 'playing'
+  // 通知大廳，這個房間已經滿員或開始遊戲，應從可加入列表中移除
+  io.emit("availableRoomsUpdate", getAvailableRoomsForDisplay(rooms)); 
+
+  // --- 2. 儲存遊戲核心數據 ---
+  // 將完整解和初始盤面儲存在一個專門的地方，避免在房間物件中暴露完整解
+  activeSudokuGames[room.id] = { 
+    solution: solution, 
+    initialPuzzle: puzzle 
+  };
+  
+  // 更新房間內的遊戲狀態物件 (gameState)，這部分是會傳遞給玩家的
+  room.gameState = { 
+    puzzle: puzzle,
+    solution: null, // ✨ 重要：絕對不要把完整解(solution)放在會傳給前端的物件裡！
+    holes: holes, 
+    difficulty: difficulty, 
+    seconds: 0 
+  };
+
+  // --- 3. 初始化所有玩家的狀態 ---
+  // 根據難度設定初始的提示和檢查次數
+  let initialHints = 0;
+  let initialValidates = 0;
+  switch (difficulty) {
+    case 'easy':    initialHints = 5; initialValidates = 5; break;
+    case 'medium':  initialHints = 3; initialValidates = 3; break;
+    case 'hard':    initialHints = 1; initialValidates = 1; break;
+    case 'extreme': initialHints = 0; initialValidates = 0; break;
+  }
+
+  room.players.forEach(p => {
+    p.status = 'playing';
+    p.currentPuzzle = puzzle.map(row => [...row]); // 為每個玩家建立獨立的盤面副本
+    p.pencilMarks = Array(9).fill().map(() => Array(9).fill().map(() => [])); // 初始化筆記
+    p.finishTime = null;
+    p.hintCount = initialHints;
+    p.validateCount = initialValidates;
+    p.pauseUses = room.isSinglePlayer ? 99 : 1; // 單人模式有無限暫停，多人只有一次
+  });
+  
+  console.log(`[伺服器] 房間 ${room.id} 遊戲設定完成，準備廣播開始信號。`);
+
+  // --- 4. 廣播遊戲開始事件 ---
+  // 向房間內所有玩家廣播，遊戲正式開始，並附上謎題資料
+  io.to(room.id).emit('sudoku_timerStart', { 
+    puzzle: puzzle, 
+    difficulty: difficulty, 
+    holes: holes 
+  });
+  
+  // --- 5. 啟動伺服器計時器 (僅限多人模式) ---
+  // 單人模式的計時器由玩家做出第一個動作後，由前端通知伺服器才啟動
+  if (!room.isSinglePlayer && !room.timerInterval) {
+    room.timerInterval = setInterval(() => {
+      const currentRoom = rooms[room.id];
+      // 確保房間還存在、遊戲還在進行、且未暫停
+      if (currentRoom && currentRoom.status === 'playing' && !currentRoom.isPaused) {
+        currentRoom.gameState.seconds++;
+        io.to(room.id).emit('sudoku_timeUpdate', { seconds: currentRoom.gameState.seconds });
+      } else if (!currentRoom || currentRoom.status !== 'playing') {
+        // 如果房間不存在或遊戲已結束，就清除計時器
+        clearInterval(room.timerInterval);
+        delete room.timerInterval;
+      }
+    }, 1000);
+  }
+}
+
 // ======================================================
 // --- 主匯出函式 ---
 // ======================================================
