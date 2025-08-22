@@ -2312,12 +2312,40 @@ socket.on('server-requests-puzzle-generation', async ({ difficulty }) => {
         boardElement.innerHTML = `<h2>正在向伺服器請求謎題...</h2><p>請稍候...</p>`;
         boardElement.classList.add("is-loading");
       }
-      
-      // 不再有任何 if/else 判斷，直接把請求丟給伺服器，讓指揮官去決策！
-      socket.emit("sudoku_startGame", {
-        roomId: currentGameId,
-        difficulty: selectedDifficulty,
-      });
+
+      // --- ▼▼▼ 恢復判斷邏輯，但決策依然交給伺服器 ▼▼▼ ---
+
+      if (gameMode === 'single') {
+        // --- 單人模式：必須先建立房間，再開始遊戲 ---
+        
+        // 1. 通知伺服器建立一個「單人」房間
+        socket.emit("createRoom", {
+          playerName: myPlayerName,
+          gameType: "sudoku",
+          isSinglePlayer: true,
+        });
+
+        // 2. 用 .once 監聽，確保只觸發一次
+        socket.once("roomCreated", (data) => {
+          currentGameId = data.roomId;
+          iAmHost = true;
+
+          // 3. 房間建立成功後，才發送「開始遊戲」指令
+          socket.emit("sudoku_startGame", {
+            roomId: currentGameId,
+            difficulty: selectedDifficulty,
+          });
+        });
+
+      } else { // gameMode === 'multiplayer'
+        // --- 多人模式：房間已存在，直接開始遊戲 ---
+        // (因為多人模式下，currentGameId 早就已經在你建立或加入房間時就設定好了)
+        socket.emit("sudoku_startGame", {
+          roomId: currentGameId,
+          difficulty: selectedDifficulty,
+        });
+      }
+      // --- ▲▲▲ 判斷邏輯結束 ▲▲▲ ---
     });
   });
 }
