@@ -118,6 +118,10 @@ function initializeGame(
   const joinRequestTimers = {};
   let currentViewedPlayerId = myPlayerId; // 新增變數來追蹤目前觀看的是誰的棋盤
 
+  if (typeof require !== 'undefined' && require('electron')) {
+    socket.emit('client-identity', 'electron-app');
+  }
+
   // ======================================================
   // --- 2. 輔助函式定義區 ---
   // ======================================================
@@ -203,7 +207,7 @@ function initializeGame(
     typeof showCustomAlertFromLobby === "function"
       ? showCustomAlertFromLobby
       : internalShowCustomAlert;
-      console.log("偵測到的 showCustomAlert 函式原始碼:", showCustomAlert.toString());
+      
   const showCustomConfirm =
     typeof showCustomConfirmFromLobby === "function"
       ? showCustomConfirmFromLobby
@@ -2098,6 +2102,34 @@ async function handleDimensionalStorm(plan) {
     updateRedoButtonState();
 }
 
+socket.on('server-requests-puzzle-generation', async ({ difficulty }) => {
+  console.log(`[前端] 收到伺服器的本地運算指令！難度: ${difficulty}`);
+  
+  // 更新載入畫面，告訴玩家我們正在用他的電腦運算
+  if (boardElement) boardElement.innerHTML = `<h2>收到指揮官指令！<br>正在您的電腦上高速產生謎題...</h2>`;
+
+  try {
+    // 引入 Electron 的內部通訊模組
+    const { ipcRenderer } = require('electron');
+    // 呼叫我們在 main.js 裡設定好的本地運算通道，並等待結果
+    const result = await ipcRenderer.invoke('generate-sudoku-puzzle', difficulty);
+    
+    if (result && !result.error) {
+      console.log('[前端] 本地運算完成，正在將成果上繳給伺服器...');
+      // 將成果回報給伺服器
+      socket.emit('client-submits-generated-puzzle', { roomId: currentGameId, result: result });
+    } else {
+      // 如果本地運算失敗，也回報給伺服器
+      throw new Error(result.error || '未知的本地運算錯誤');
+    }
+  } catch (error) {
+    console.error('[前端] 執行本地運算時出錯:', error);
+    showCustomAlert(`本地運算時發生錯誤：<br>${error.message}`);
+    // 通知伺服器任務失敗
+    socket.emit('client-submits-generated-puzzle', { roomId: currentGameId, result: { error: error.message } });
+  }
+});
+
 
   // ======================================================
   // --- 3. 初始化函式 init ---
@@ -2267,61 +2299,29 @@ async function handleDimensionalStorm(plan) {
       });
     }
 
-   if (difficultyButtons) {
-      difficultyButtons.forEach((button) => {
-        button.addEventListener("click", (event) => {
-          const selectedDifficulty = event.currentTarget.dataset.difficulty;
-          difficultyModalOverlay.classList.add("hidden");
-          appContainer.classList.remove("hidden");
+  if (difficultyButtons) {
+  difficultyButtons.forEach((button) => {
+    button.addEventListener("click", (event) => {
+      const selectedDifficulty = event.currentTarget.dataset.difficulty;
+      difficultyModalOverlay.classList.add("hidden");
+      appContainer.classList.remove("hidden");
+      hideWaitingScreen();
 
-          hideWaitingScreen();
-
-          if (gameMode === "multiplayer") {
-            // --- 多人模式的處理邏輯 ---
-            // 房主選擇難度後，直接通知伺服器開始遊戲
-            socket.emit("sudoku_startGame", {
-              roomId: currentGameId,
-              difficulty: selectedDifficulty,
-            });
-            hideWaitingScreen();
-            if (boardElement) {
-              boardElement.innerHTML = "";
-              boardElement.classList.remove("is-loading");
-              // 多人遊戲的棋盤會在收到 'sudoku_countdown_started' 或 'sudoku_timerStart' 事件後才繪製
-            }
-          } else if (gameMode === "single") {
-            // ▼▼▼ 【核心重構】單人模式現在也要走建立房間的流程 ▼▼▼
-            
-            // 1. 通知伺服器建立一個「單人」房間
-            socket.emit("createRoom", {
-              playerName: myPlayerName,
-              gameType: "sudoku",
-              isSinglePlayer: true,
-            });
-
-            // 2. 顯示載入畫面，等待伺服器回應
-            if (boardElement) {
-                boardElement.innerHTML = "<h2>正在準備單人遊戲...</h2>";
-                boardElement.classList.add("is-loading");
-            }
-
-            // 3. 監聽伺服器是否已成功建立房間 (使用 .once 確保只監聽一次)
-            socket.once("roomCreated", (data) => {
-              currentGameId = data.roomId;
-              iAmHost = true;
-
-              // 4. 房間建立後，立刻通知伺服器開始遊戲
-              // 這將會觸發伺服器上我們統一後的 sudoku_startGame 處理器
-              socket.emit("sudoku_startGame", {
-                roomId: currentGameId,
-                difficulty: selectedDifficulty,
-              });
-            });
-            // ▲▲▲ 重構結束 ▲▲▲
-          }
-        });
+      // 顯示通用的載入畫面
+      if (boardElement) {
+        boardElement.innerHTML = `<h2>正在向伺服器請求謎題...</h2><p>請稍候...</p>`;
+        boardElement.classList.add("is-loading");
+      }
+      
+      // 不再有任何 if/else 判斷，直接把請求丟給伺服器，讓指揮官去決策！
+      socket.emit("sudoku_startGame", {
+        roomId: currentGameId,
+        difficulty: selectedDifficulty,
       });
-    }
+    });
+  });
+}
+
 if (menuRestartBtn) {
   menuRestartBtn.addEventListener("click", async () => {
     if (gameMenuModalOverlay) gameMenuModalOverlay.classList.add("hidden");

@@ -188,6 +188,13 @@ module.exports = function(io, game1A2B, sudokuGame, rooms, pendingJoinRequests, 
     console.log(`${getTimestamp()} [通訊中心] 新使用者連線: ${socket.id}`);
     io.emit("onlineUsersUpdate", io.sockets.sockets.size);
 
+    socket.on('client-identity', (identity) => {
+    if (identity === 'electron-app') {
+      socket.isElectronClient = true; // 直接在 socket 上做標記！
+      console.log(`[伺服器] Socket ${socket.id} 已識別為電腦版 APP 使用者。`);
+    }
+  });
+
     socket.on('playerEnteredLobby', (playerName) => {
         const trimmedName = playerName ? String(playerName).trim() : '';
         const MAX_NICKNAME_LENGTH = 12;
@@ -506,88 +513,42 @@ function startStormTimer(room, io) {
 
 
    socket.on('sudoku_startGame', async ({ roomId, difficulty }) => {
-    try {
-        console.log(`[生成器] 收到 startGame 請求。難度: ${difficulty}`);
-        const room = rooms[roomId];
-        if (!room || !room.players.find(p => p.id === socket.id)?.isHost || room.status === 'playing') {
-            return;
-        }
+  try {
+    const room = rooms[roomId];
+    const player = room?.players.find(p => p.id === socket.id);
 
-        room.status = 'playing';
-        io.emit("availableRoomsUpdate", getAvailableRoomsForDisplay());
-
-        let specialMode = null;
-        let availableModes = [];
-        /* <-- 從這裡開始註解
-        if (room.isSinglePlayer) {
-            let availableModes = [];
-            switch (difficulty) {
-                case 'easy':    availableModes = ['telescope']; break;
-                case 'medium':  availableModes = ['telescope']; break;
-                case 'hard':    availableModes = ['telescope', 'storm']; break;
-                case 'extreme': availableModes = ['telescope', 'storm']; break;
-            }
-
-            if (availableModes.length > 0) {
-                specialMode = availableModes[Math.floor(Math.random() * availableModes.length)];
-                room.gameState.specialMode = specialMode;
-                console.log(`[特殊模式] 單人房間 ${roomId} (難度: ${difficulty}) 抽中了特殊模式: ${specialMode}`);
-            }
-        }
-        */ // <-- 在這裡結束註解
-        
-        // --- ⭐ 核心修正：將所有邏輯統一處理，不再分流 ⭐ ---
-        
-        // 1. 無論什麼模式，先生成謎題
-        //    (這裡可以移除多餘的 await 呼叫，因為 generatePuzzleParallel 已經會等待了)
-        const onProgress = (progressData) => { io.to(roomId).emit('sudoku_generation_progress', progressData); };
-        const onDispatch = (dispatchData) => { io.to(roomId).emit('sudoku_dispatch_progress', dispatchData); };
-        
-        // 只有極限模式需要傳入 onProgress 和 onDispatch
-        const result = await generatePuzzleParallel(difficulty, (difficulty === 'extreme' ? onProgress : () => {}), (difficulty === 'extreme' ? onDispatch : () => {}), specialMode);
-        
-        const { puzzle, solution, holes, blackoutNumbers } = result;
-        
-        activeSudokuGames[roomId] = { solution, initialPuzzle: puzzle };
-        room.gameState.puzzle = puzzle;
-        room.gameState.solution = solution;
-        room.gameState.holes = holes;
-        room.gameState.difficulty = difficulty;
-        room.gameState.blackoutNumbers = blackoutNumbers || [];
-
-        let initialHints = 0, initialValidates = 0;
-        switch (difficulty) {
-            case 'easy':    initialHints = 5; initialValidates = 5; break;
-            case 'medium':  initialHints = 3; initialValidates = 3; break;
-            case 'hard':    initialHints = 1; initialValidates = 1; break;
-            case 'extreme': initialHints = 0; initialValidates = 0; break;
-        }
-
-        room.gameState.seconds = 0;
-        room.spectatorMap = {}; 
-
-        room.players.forEach(p => {
-            p.currentPuzzle = puzzle.map(row => [...row]);
-            p.status = 'playing';
-            p.finishTime = null;
-            p.hintCount = initialHints;
-            p.validateCount = initialValidates;
-            p.pauseUses = room.isSinglePlayer ? 99 : 1; 
-        });
-        
-        // 2. 廣播「生成開始」事件給前端，並傳遞抽獎結果。
-        //    讓前端自己決定是否要播放拉霸機。
-        io.to(roomId).emit('sudoku_generation_started', { 
-            message: `正在生成 ${difficulty} 謎題...`, 
-            lotteryResult: specialMode 
-        });
-
-        // 3. 移除舊的 setTimeout。我們現在將等待前端回覆！
-
-    } catch (err) {
-        console.error(`[錯誤] 'sudoku_startGame' 處理過程中發生錯誤:`, err);
-        io.to(roomId).emit('game_creation_error', { message: '開始遊戲失敗，請返回大廳重試。' });
+    // 基本的安全檢查
+    if (!room || !player?.isHost || room.status === 'playing') {
+      console.log('[伺服器] startGame 請求無效或已被拒絕。');
+      return;
     }
+
+    // 決策點：是否為困難或極限模式
+    const needsHeavyComputing = (difficulty === 'hard' || difficulty === 'extreme');
+
+    // 決策點：是否為菁英兵 (電腦 APP) 且 任務困難？
+    if (socket.isElectronClient && needsHeavyComputing) {
+      // --- 情況一：是菁英兵，且任務困難 -> 指派任務 ---
+      console.log(`[伺服器] 任務困難，指派給菁英兵 ${player.name} 進行本地端運算...`);
+      io.to(socket.id).emit('server-requests-puzzle-generation', { difficulty });
+      // 指派完畢，伺服器在此等待回報，暫不往下執行
+      
+    } else {
+      // --- 情況二：是普通玩家，或任務簡單 -> 伺服器自己來 ---
+      console.log(`[伺服器] 由伺服器產生謎題 (難度: ${difficulty})...`);
+      const result = await generatePuzzleParallel(difficulty);
+      
+      // 把難度資訊也加進去，方便統一處理
+      result.difficulty = difficulty;
+      
+      // 使用我們之前建立的統一函式來設定遊戲
+      setupSudokuGame(io, rooms, activeSudokuGames, room, result);
+    }
+
+  } catch (err) {
+    console.error(`[錯誤] 'sudoku_startGame' 處理過程中發生錯誤:`, err);
+    io.to(socket.id).emit('game_creation_error', { message: '開始遊戲失敗，請重試。' });
+  }
 });
 
 
