@@ -1,15 +1,16 @@
 // ======================================================
 // Sudoku 遊戲主腳本 (最終完整版 - 無省略)
 // ======================================================
+var socket = null;
 
 function initializeGame(
-  socket,
+  _socket,
   initialState,
   showCustomAlertFromLobby,
   showCustomConfirmFromLobby
 ) {
 
-  
+  socket = _socket;
   console.log("initializeGame function started.");
 
   // ======================================================
@@ -2102,31 +2103,28 @@ async function handleDimensionalStorm(plan) {
     updateRedoButtonState();
 }
 
-socket.on('server-requests-puzzle-generation', async ({ difficulty }) => {
-  console.log(`[前端] 收到伺服器的本地運算指令！難度: ${difficulty}`);
-  
-  // 更新載入畫面，告訴玩家我們正在用他的電腦運算
-  if (boardElement) boardElement.innerHTML = `<h2>收到指揮官指令！<br>正在您的電腦上高速產生謎題...</h2>`;
+socket.on('server-requests-puzzle-generation', ({ difficulty }) => {
+  console.log(`[前端] 收到伺服器的本地運算指令！正在轉達給 Preload...`);
+  if (boardElement) boardElement.innerHTML = `<h2>正在調用本地資源...<br>可能會有些許卡頓</h2>`;
 
-  try {
-    // 引入 Electron 的內部通訊模組
-    const { ipcRenderer } = require('electron');
-    // 呼叫我們在 main.js 裡設定好的本地運算通道，並等待結果
-    const result = await ipcRenderer.invoke('generate-sudoku-puzzle', difficulty);
-    
-    if (result && !result.error) {
-      console.log('[前端] 本地運算完成，正在將成果上繳給伺服器...');
-      // 將成果回報給伺服器
-      socket.emit('client-submits-generated-puzzle', { roomId: currentGameId, result: result });
-    } else {
-      // 如果本地運算失敗，也回報給伺服器
-      throw new Error(result.error || '未知的本地運算錯誤');
-    }
-  } catch (error) {
-    console.error('[前端] 執行本地運算時出錯:', error);
-    showCustomAlert(`本地運算時發生錯誤：<br>${error.message}`);
-    // 通知伺服器任務失敗
-    socket.emit('client-submits-generated-puzzle', { roomId: currentGameId, result: { error: error.message } });
+  // 直接透過特使傳話，不等待回覆
+  window.electronAPI.generatePuzzle({ difficulty, roomId: currentGameId });
+});
+
+// 新增邏輯 2：監聽來自 Preload 的「大廳廣播」
+window.addEventListener('puzzle-result', (event) => {
+  const result = event.detail; // 從廣播事件中取得結果
+  console.log('[前端] 監聽到 Preload 廣播，收到運算成果！', result);
+
+  if (result && !result.error) {
+    // 上繳成果給伺服器
+    console.log('[前端] 成果有效，正在上繳給伺服器...');
+    socket.emit('client-submits-generated-puzzle', { roomId: currentGameId, result: result });
+  } else {
+    // 處理錯誤
+    console.error('[前端] 本地運算回報錯誤:', result.error);
+    showCustomAlert(`本地運算時發生錯誤：<br>${result.error}`);
+    socket.emit('client-submits-generated-puzzle', { roomId: currentGameId, result: { error: result.error } });
   }
 });
 

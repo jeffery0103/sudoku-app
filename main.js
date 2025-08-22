@@ -38,21 +38,21 @@ app.on('window-all-closed', () => {
 // ======================================================
 // --- ✨ 4. 全新增加的區塊：APP 大腦的核心運算中心 ---
 // ======================================================
-ipcMain.handle('generate-sudoku-puzzle', async (event, difficulty) => {
-  console.log(`[Electron Main] 收到來自遊戲畫面的運算請求！難度: ${difficulty}`);
-  
+ipcMain.on('generate-sudoku-puzzle', async (event, payload) => {
+  const { difficulty, roomId } = payload;
+  console.log(`[Electron Main] 收到運算請求！難度: ${difficulty}, 房間ID: ${roomId}`);
+
   try {
-    // 當收到請求時，直接呼叫我們移植進來的謎題產生器
-    // 這裡的運算會在你自己的電腦上火力全開！
     const result = await generatePuzzleParallel(difficulty);
-    console.log(`[Electron Main] 本地端已成功產生謎題，洞數: ${result.holes}，準備回傳結果。`);
-    
-    // 將運算結果回傳給遊戲畫面
-    return result;
+    console.log(`[Electron Main] 本地運算完成，洞數: ${result.holes}，準備寄信給 Preload。`);
+
+    // ✨ 核心修改：不再執行 JS，而是發送一個內部訊息給 preload.js
+    mainWindow.webContents.send('puzzle-generated', result);
+
   } catch (error) {
     console.error('[Electron Main] 本地端產生謎題時發生錯誤:', error);
-    // 如果發生錯誤，也把錯誤訊息回傳
-    return { error: error.message };
+    // ✨ 錯誤處理也要修改：同樣透過 send 來回報
+    mainWindow.webContents.send('puzzle-generated', { error: error.message });
   }
 });
 
