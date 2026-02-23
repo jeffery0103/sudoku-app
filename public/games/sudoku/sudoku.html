@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1200, user-scalable=yes" />
+  <title>數獨 Sudoku</title>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+  <div id="lottery-modal-overlay" class="hidden">
+    <div id="lottery-machine">
+    <h3>特殊模式挑戰</h3>
+    <div class="reels-container">
+        <div class="reel-container"><div class="reel reel-1"></div></div>
+        <div class="reel-container"><div class="reel reel-2"></div></div>
+        <div class="reel-container"><div class="reel reel-3"></div></div>
+    </div>
+    <button id="lottery-lever">
+        <span class="lever-arm"></span>
+        <span class="lever-handle"></span>
+    </button>
+    <p id="lottery-result-text"></p>
+</div>
+</div>
+
+  <div id="sudoku-mode-modal-overlay" class="hidden">
+    <div id="sudoku-mode-modal">
+      <h3>請選擇數獨遊戲模式</h3>
+      <div id="sudoku-mode-buttons">
+        <button id="sudoku-single-player-btn" class="mode-select-btn" data-mode="single">
+          <h4>單人挑戰</h4>
+          <span>經典玩法，挑戰自我</span>
+        </button>
+        <button id="sudoku-multi-player-btn" class="mode-select-btn" data-mode="multiplayer">
+          <h4>多人競速</h4>
+          <span>與朋友來一場腦力對決</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="difficulty-modal-overlay" class="hidden">
+    <div id="difficulty-modal">
+      <h3>請選擇遊戲難度</h3>
+      <p>難度將會影響題目的複雜度與輔助功能的啟用狀態。</p>
+      <div id="difficulty-buttons">
+        <button class="difficulty-btn" data-difficulty="easy">
+          <h4>簡單</h4>
+          <span>輔助全開，適合新手</span>
+        </button>
+        <button class="difficulty-btn" data-difficulty="medium">
+          <h4>中等</h4>
+          <span>保留部分輔助，適合進階</span>
+        </button>
+        <button class="difficulty-btn" data-difficulty="hard">
+          <h4>困難</h4>
+          <span>無進階輔助，純粹挑戰</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="custom-modal-overlay" class="hidden">
+    <div id="custom-modal">
+      <h3 id="modal-title">需要您的確認</h3>
+      <p id="modal-message"></p>
+      <div id="modal-buttons">
+        <button id="modal-confirm-btn">確定</button>
+        <button id="modal-cancel-btn">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="alert-modal-overlay" class="hidden">
+    <div id="alert-modal">
+      <h3 id="alert-title">通知</h3> <p id="alert-message"></p>
+      <button id="alert-ok-btn">確定</button>
+    </div>
+  </div>
+
+  <div id="win-modal-overlay" class="hidden">
+  <div id="win-modal">
+    <h2>恭喜通關！</h2>
+    <p>您已成功完成數獨挑戰！</p>
+
+   <div id="win-stats-container">
+     <div class="win-stat-item">
+       <span class="stat-label">遊戲難度:</span>
+       <span id="win-stat-difficulty" class="stat-value"></span>
+     </div>
+     <div class="win-stat-item">
+    <span class="stat-label">謎題空格:</span>
+    <span id="win-stat-holes" class="stat-value"></span>
+     </div>
+     <div class="win-stat-item">
+       <span class="stat-label">通關耗時:</span>
+       <span id="win-stat-time" class="stat-value"></span>
+     </div>
+     <div class="win-stat-item">
+       <span class="stat-label">使用提示:</span>
+       <span id="win-stat-hints" class="stat-value"></span>
+     </div>
+     <div class="win-stat-item">
+       <span class="stat-label">使用檢查:</span>
+       <span id="win-stat-validations" class="stat-value"></span>
+     </div>
+   </div>
+   <button id="win-modal-new-game-btn">再來一局</button>
+   <button id="win-modal-extreme-challenge-btn" class="menu-button extreme-challenge hidden">
+      ✨ 挑戰極限模式 ✨
+    </button>
+  </div>
+</div>
+
+  <div id="game-menu-modal-overlay" class="hidden">
+    <div id="game-menu-modal">
+      <h3>遊戲選單</h3>
+      <div class="game-menu-buttons">
+        <button id="menu-restart-btn">重新開始本局</button>
+        <button id="menu-new-game-btn">開啟新的一局</button>
+        <button id="menu-back-to-lobby-btn">返回遊戲大廳</button>
+        <button id="menu-resume-btn">繼續遊戲</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="app-container" class="app-container hidden">
+    <div class="main-container">
+
+      <div class="game-wrapper">
+        <div class="game-main-content">
+          <div class="title-container">
+            <h1>數獨 Sudoku</h1>
+            <div id="player-name-display">
+              </div>
+            <div id="timer-container">
+              <span class="timer-label">已用時間：</span>
+              <span id="timer-value">00:00:00</span>
+            </div>
+          </div>
+
+          <div id="game-board" class="hidden"></div>
+
+          <div id="waiting-view">
+              <div class="waiting-text-container">
+                  <p id="waiting-main-text"></p>
+                  <p id="waiting-sub-text">等待其他玩家加入...</p>
+              </div>
+              <button id="sudoku-start-game-btn" class="hidden">開始遊戲</button>
+          </div>
+          
+          <div id="sudoku-join-requests-area" class="hidden">
+              <h3>加入請求</h3>
+              <ul id="sudoku-join-requests-list">
+                  </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="controls-wrapper">
+        <div id="player-name-display-corner"></div>
+
+        <div id="in-game-controls" class="hidden">
+            <div class="upper-controls">
+              <div id="quadrant-numbers" class="control-quadrant">
+                <h3>數字鍵盤</h3>
+                <div id="number-palette"></div>
+              </div>
+              
+              <div id="game-info-panel" class="control-quadrant">
+  
+                <div id="single-player-info" class="hidden">
+                  <h3>遊戲資訊</h3>
+                  <div class="info-item progress-bar-container">
+                    <span>完成進度:</span>
+                    <div class="progress-bar"><div id="progress-bar-fill"></div></div>
+                    <span id="progress-percentage">0%</span>
+                  </div>
+                  <div class="info-item"><span>剩餘提示:</span><span id="info-hint-count">0</span></div>
+                  <div class="info-item"><span>剩餘檢查:</span><span id="info-validate-count">0</span></div>
+                  <hr>
+                  <div class="info-item-column"><h4>當前難度</h4><p id="difficulty-display">-</p></div>
+                  <div class="info-item-column"><h4>輔助功能</h4><p id="helpers-display">-</p></div>
+                </div>
+              
+                <div id="multiplayer-info" class="hidden">
+                  <div class="in-game-tabs-container">
+                    <button class="in-game-tab-button active" data-tab="ingame-progress">進度排行</button>
+                    <button class="in-game-tab-button" data-tab="ingame-chat">
+                        聊天室
+                      <span id="ingame-chat-notification-badge" class="hidden"></span>
+                    </button>
+                    <button class="in-game-tab-button" data-tab="ingame-info">遊戲資訊</button>
+                  </div>
+                  
+                  <div class="in-game-tab-content-wrapper">
+                    <div id="tab-content-ingame-progress" class="in-game-tab-content active">
+                      <div id="opponent-progress-container">
+                        </div>
+                    </div>
+              
+                    <div id="tab-content-ingame-chat" class="in-game-tab-content">
+                      <div id="in-game-chat-container">
+                        <div class="in-game-chat-messages">
+                          </div>
+                        <div class="in-game-chat-input">
+                          <input type="text" placeholder="輸入訊息...">
+                          <button>傳送</button>
+                        </div>
+                      </div>
+                    </div>
+                    <div id="tab-content-ingame-info" class="in-game-tab-content">
+                        <div id="multiplayer-game-info-content" class="game-info-content">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          <div class="lower-controls">
+            <label class="switch-control" for="pencil-toggle-checkbox"><span class="switch-label">筆記模式</span><input type="checkbox" id="pencil-toggle-checkbox" /><span class="slider round"></span></label>
+            <button id="validate-btn">檢查</button>
+            <button id="hint-btn">提示</button>
+            <label class="switch-control" for="highlight-helper-checkbox"><span class="switch-label">高亮輔助</span><input type="checkbox" id="highlight-helper-checkbox" /><span class="slider round"></span></label>
+            <button id="pause-btn">暫停</button>
+            <button id="game-menu-btn">遊戲選單</button>
+          </div>
+        </div>
+
+        <div id="multiplayer-waiting-panel" class="hidden">
+            <div class="tabs-container">
+              <button class="tab-button active" data-tab="lobby-player-list">玩家列表</button>
+              <button class="tab-button" data-tab="lobby-chat">
+                聊天室
+                <span id="chat-notification-badge" class="hidden"></span>
+              </button>
+            </div>
+            <div class="tab-content active" id="tab-content-lobby-player-list">
+              <div class="player-list-container">
+                  </div>
+            </div>
+            <div class="tab-content" id="tab-content-lobby-chat">
+              <div class="chat-messages"></div>
+              <div class="chat-input-container">
+                <input type="text" placeholder="輸入訊息...">
+                <button>傳送</button>
+              </div>
+            </div>
+        </div>
+
+        <div id="solution-view" class="hidden">
+          <h3>完整解答</h3>
+          <div id="solution-board"></div>
+          <div class="solution-buttons">
+            <button id="solution-new-game-btn">開啟新的一局</button>
+            <button id="solution-back-to-lobby-btn">返回大廳</button>
+          </div>
+        </div>
+        
+      </div> 
+    </div> 
+  </div> 
+</body>
+</html>

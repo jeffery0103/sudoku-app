@@ -1,0 +1,2151 @@
+/* ====================================================== */
+/* Sudoku 遊戲專用樣式表 (最終整合版)            */
+/* ====================================================== */
+
+/* --- 1. 變數與全域設定 --- */
+:root {
+  --highlight-bg: #eed5b1; /* 輔助高亮的背景色 */
+  --selected-bg: #fadccc;  /* 選中格子的背景色 */
+  --theme-color-dark: #5d534a;
+  --theme-color-light: #c0b2a3;
+  --border-color: #d3c9bc;
+  --bg-color-light: #fee9ca;
+  --highlight-given-bg: #e2c7a0;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "Noto Sans TC", sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: var(--bg-color-light);
+}
+
+.hidden {
+  display: none !important;
+}
+
+
+/* --- 2. 遊戲主佈局容器 --- */
+#app-container {
+  /* ✨ 1. 魔法發生的地方：將長寬比鎖定為 16:9 ✨ */
+  aspect-ratio: 16 / 9;
+
+  /* ✨ 2. 尺寸限制：讓容器同時參考視窗的寬度和高度來縮放 ✨ */
+  /* 確保它永遠不會超出螢幕邊界 */
+  width: 100%;
+  height: auto; /* 高度由 aspect-ratio 自動計算 */
+  max-width: calc( (100vh - 30px) * (16 / 9) ); /* 寬度上限，由視窗高度決定 */
+  max-height: calc( 100vw - 30px ); /* 高度上限，由視窗寬度決定 */
+  
+  /* ✨ 3. 恢復您原本的樣式，並移除舊的尺寸設定 ✨ */
+  display: flex;
+  justify-content: center;
+  background-color: transparent !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  margin: auto; /* ✨ 新增：讓容器在 flex 佈局中完美置中 */
+}
+
+.main-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: stretch;
+  /* ✨ 核心修改：增加左右兩欄之間的間距，例如 30px */
+  gap: 30px;
+  background-color: transparent;
+}
+
+.game-wrapper {
+  display: flex;
+  flex-direction: column;
+  /* ✨ 恢復白色背景和陰影 */
+  background-color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  padding: 15px;
+  border-radius: 12px;
+  flex: 1;
+  min-width: 0;
+  justify-content: center;
+  box-sizing: border-box;
+  height: 100%;
+}
+
+
+.game-main-content {
+  margin: 0 auto;
+  width: 100%;
+  max-width: 75vh;
+  position: relative;
+}
+
+.title-container {
+  width: 100%;
+  margin: 0 0 10px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 15px;
+}
+
+.title-container h1 {
+  margin: 0;
+  white-space: nowrap;
+  font-size: 1.8em;
+}
+
+#timer-container {
+  display: flex;
+  align-items: baseline;
+  color: var(--theme-color-dark);
+}
+
+
+/* --- 3. 遊戲棋盤 (#game-board) --- */
+#game-board {
+  display: grid;
+  grid-template-rows: repeat(9, 1fr);
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border: 3px solid var(--theme-color-dark);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+#game-board.is-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.2em;
+  color: #555;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+}
+.row .cell:nth-child(3n):not(:last-child) {
+  border-right: 2px solid var(--theme-color-dark);
+}
+.row:nth-child(3n):not(:last-child) .cell {
+  border-bottom: 2px solid var(--theme-color-dark);
+}
+
+.cell {
+  border: 1px solid var(--border-color);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: clamp(0.7em, 3vh, 1.8em);
+  cursor: pointer;
+  transition: background-color 0.2s;
+  position: relative;
+}
+
+.cell.selected {
+  background-color: var(--selected-bg) !important;
+}
+.cell.highlight-rc {
+  background-color: var(--highlight-bg) !important;
+}
+
+
+.pencil-grid {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  padding: 0px;
+  gap: 0px;
+  pointer-events: none;
+}
+.pencil-mark {
+  font-size: 0.5em;
+  color: #85796e;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+
+/* --- 4. 右側控制面板 (依據 Word 示意圖最終版) --- */
+/* 檔案: public/games/sudoku/sudoku.css */
+
+.controls-wrapper {
+  flex: 1;
+  min-width: 0;
+  /* ✨ 恢復白色背景和陰影 */
+  background-color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  flex-shrink: 0;
+}
+
+.controls-grid {
+  flex-grow: 1;
+  display: grid;
+  grid-template-rows: 1fr auto; /* 上方填滿，下方自適應 */
+  gap: 15px;
+}
+
+/* 4.1 上方區域 (數字 & 資訊) */
+.upper-controls {
+  display: grid;
+  grid-template-columns: 2fr 3fr; /* 1/3 vs 2/3 寬度 */
+  gap: 15px;
+  min-height: 0;
+}
+
+.control-quadrant {
+  display: flex;
+  flex-direction: column;
+}
+
+.control-quadrant h3 {
+  margin: 0 0 10px 0;
+  font-size: 1.1em;
+  color: #333;
+  border-bottom: 1px solid var(--border-color);
+  padding-top: 9px;
+  padding-bottom: 9px;
+}
+
+#number-palette {
+  flex-grow: 1; /* 確保它能填滿宮格空間 */
+  display: grid;
+  /* 網格設定為 3 欄 4 行 */
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(4, 1fr);
+  gap: 8px;
+  /* --- 以下是從您舊檔案中複製過來的，確保樣式一致 --- */
+  height: 100%;
+  padding: 5px;
+  box-sizing: border-box;
+}
+
+
+
+#number-palette .number {
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  background-color: #ffffff;
+  transition: background-color 0.2s;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.2em;
+  color: var(--theme-color-dark);
+}
+
+
+
+#number-palette .number:hover {
+  background-color: #eae4dd;
+}
+
+/* --- ✨ 新增區塊：將佔位格變透明 --- */
+#number-palette div:nth-child(10) {
+  background-color: transparent;
+  
+  cursor: default;
+}
+#game-info-panel .info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9em;
+  padding: 4px 0;
+}
+.progress-bar {
+  flex-grow: 1;
+  height: 12px;
+  background-color: #eae4dd;
+  border-radius: 6px;
+  margin: 0 10px;
+  overflow: hidden;
+}
+#progress-bar-fill {
+  width: 0%;
+  height: 100%;
+  background-color: var(--theme-color-dark);
+  border-radius: 6px;
+  transition: width 0.3s ease-in-out;
+}
+
+/* 4.2 下方區域 (開關 & 按鈕) */
+.lower-controls {
+  display: grid;
+  /* ✨ 核心修改(2)：將三欄等寬，改為符合 2:3 比例的三欄設定 */
+  /* (2fr) vs (1.5fr + 1.5fr = 3fr) */
+  grid-template-columns: 2fr 1.5fr 1.5fr;
+  grid-template-rows: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.lower-controls > .switch-control,
+.lower-controls > button {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+}
+
+.switch-control {
+  justify-content: space-between;
+  padding: 8px 12px;
+  background-color: #eae4dd;
+  border: 1px solid var(--border-color);
+}
+.switch-label {
+  font-size: 1em;
+  font-weight: 500;
+}
+.switch-control input {
+  opacity: 0; width: 0; height: 0;
+}
+.slider {
+  position: relative;
+  cursor: pointer;
+  width: 44px; height: 24px;
+  background-color: var(--theme-color-light);
+  transition: 0.4s;
+  border-radius: 24px;
+}
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px; width: 18px;
+  left: 3px; bottom: 3px;
+  background-color: white;
+  transition: 0.4s;
+  border-radius: 50%;
+}
+input:checked + .slider {
+  background-color: var(--theme-color-dark);
+}
+input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+.lower-controls > button {
+  justify-content: center;
+  padding: 12px 10px;
+  font-size: 1rem;
+  font-weight: bold;
+  color: white;
+  border: none;
+  cursor: pointer;
+  margin: 0;
+}
+#validate-btn, #hint-btn, #pause-btn {
+  background-color: var(--theme-color-light);
+}
+#game-menu-btn {
+  background-color: var(--theme-color-dark);
+}
+
+
+/* --- 5. 彈出視窗 (Modals) --- */
+#custom-modal-overlay,
+#win-modal-overlay,
+#alert-modal-overlay,
+#difficulty-modal-overlay,
+#game-menu-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(5px);
+}
+
+#custom-modal, #win-modal, #alert-modal, #difficulty-modal, #game-menu-modal {
+  background-color: white;
+  padding: 25px 30px;
+  border-radius: 12px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  width: 90%;
+  max-width: 450px;
+  text-align: center;
+}
+
+/* 難度選擇視窗 */
+#difficulty-modal {
+  max-width: 600px;
+}
+#difficulty-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+.difficulty-btn {
+  flex: 1;
+  padding: 15px;
+  border-radius: 10px;
+  border: 2px solid #eae4dd;
+  background-color: #fdfdfd;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  text-align: left;
+}
+.difficulty-btn:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+  background-color: #e7dbcd;
+}
+.difficulty-btn h4 {
+  margin: 0 0 5px 0;
+  font-size: 1.2em;
+  color: var(--theme-color-dark);
+}
+.difficulty-btn span {
+  font-size: 0.9em;
+  color: #85796e;
+}
+
+/* 遊戲選單 */
+#game-menu-modal {
+ min-width: 300px;
+}
+.game-menu-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.game-menu-buttons button {
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  border: none;
+}
+#menu-restart-btn, #menu-new-game-btn, #menu-back-to-lobby-btn {
+  background-color: var(--theme-color-light);
+}
+#menu-restart-btn:hover, #menu-new-game-btn:hover, #menu-back-to-lobby-btn:hover {
+  background-color: #a99a8d;
+}
+#menu-resume-btn {
+  background-color: var(--theme-color-dark);
+}
+#menu-resume-btn:hover {
+  background-color: #4a443c;
+}
+
+/* --- 修正下方控制區的對齊偏移問題 --- */
+
+/* 移除左下角宮格的內邊距 */
+#quadrant-modes {
+  padding: 0;
+}
+
+/* 移除右下角宮格的內邊距，讓按鈕網格可以貼齊邊緣 */
+#quadrant-actions {
+  padding: 0;
+}
+
+#alert-modal {
+  border: none !important;
+}
+
+#sudoku-mode-modal {
+  max-width: 600px;
+}
+
+/* 按鈕容器，設定為 flex 佈局，讓按鈕水平排列 */
+#sudoku-mode-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 20px; /* 按鈕之間的間距 */
+  margin-top: 30px;
+}
+
+/* 複製 difficulty-btn 的風格到 mode-select-btn */
+.mode-select-btn {
+  flex: 1; /* 讓兩個按鈕平分寬度 */
+  padding: 15px;
+  border-radius: 10px;
+  border: 2px solid #eae4dd;
+  background-color: #fdfdfd;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  text-align: left;
+}
+
+/* 滑鼠懸停效果 */
+.mode-select-btn:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+  border-color: #a3978b;
+}
+
+/* 按鈕內部的標題 (h4) 和描述 (span) 樣式 */
+.mode-select-btn h4 {
+  margin: 0 0 5px 0;
+  font-size: 1.2em;
+  color: #5d534a;
+}
+
+.mode-select-btn span {
+  font-size: 0.9em;
+  color: #85796e;
+}
+.cell.selected.highlight-rc {
+  background-color: var(--selected-bg) !important;
+}
+
+
+
+/* --- 新增：鍵盤焦點的視覺樣式 --- */
+.cell.keyboard-focus {
+  outline: 2px solid #fd850d; 
+  outline-offset: -2px;
+  z-index: 10;
+}
+
+.cell.highlight-same-number .main-value {
+  font-weight: 900;
+  color: var(--theme-color-dark);
+  transform: scale(1.1);
+  animation: pulse 0.6s; /* ✨ 新增這一行來加入抖動效果 */
+}
+
+.cell.given-number,
+.cell.hinted {
+  background-color: #eae4dd; /* 統一的淺灰色背景 */
+  cursor: not-allowed;
+}
+
+/* 2. 分別設定它們各自不同的文字顏色 */
+.cell.given-number {
+  font-weight: bold;
+  color: var(--theme-color-dark); /* 題目數字為深棕色 */
+}
+
+.cell.hinted .main-value {
+  color: #0d6efd !important; /* 提示數字為藍色 */
+  font-weight: bold;
+}
+
+/* --- 新增：讓「提示」產生的數字在即時衝突時也能變紅 --- */
+
+.cell.hinted.conflict-with-selection .main-value {
+  color: #dc3545 !important; /* 使用和之前一樣的醒目紅色 */
+  animation: pulse 0.6s;      /* 重用我們之前定義的閃爍動畫 */
+}
+
+.cell.given-number.highlight-rc,
+.cell.hinted.highlight-rc {
+  background-color: var(--highlight-given-bg) !important;
+}
+
+.cell.conflict-with-selection .main-value {
+  color: #dc3545 !important; /* 一個醒目的紅色 */
+  font-weight: bold;
+  /* 可以加上一個輕微的動畫，讓提示更明顯 */
+  animation: pulse 0.6s;
+}
+
+/* 2. 為「提示」功能產生的格子設定樣式 */
+.cell.hinted {
+  /* 讓滑鼠指標變為「禁止」圖示，提示玩家此格無法操作 */
+  cursor: not-allowed;
+}
+
+.cell.hinted .main-value {
+  /* 讓提示數字變為藍色 */
+  color: #0d6efd !important;
+  font-weight: bold;
+}
+
+/* 3. 新增一個閃爍動畫的定義 (如果尚未定義過) */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.controls-wrapper {
+  position: relative;
+}
+
+.info-item-column {
+  margin-top: 2px; /* 您可以微調這個數值，15px 是一個不錯的起始點 */
+  text-align: left;   /* 確保內容是靠左對齊的 */
+}
+
+/* 3. 讓標題 (h4) 和內容 (p) 更緊湊 */
+.info-item-column h4 {
+  margin-top: 0;
+  margin-bottom: 0px; /* 縮小標題和內容之間的垂直距離 */
+}
+
+.info-item-column p {
+  margin: 0;          /* 移除段落可能有的預設邊距 */
+}
+
+/* 檔案: public/games/sudoku/sudoku.css */
+
+/* --- 全新的解答畫面樣式 --- */
+
+/* 解答畫面的主容器 */
+#solution-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  width: 100%;
+  height: 100%;
+}
+
+#solution-view h3 {
+  margin: 0;
+  font-size: 1.1em;
+  color: var(--theme-color-dark);
+  border-bottom: 1px solid #eee;
+  padding-bottom: 8px;
+  width: 100%;
+  text-align: center;
+}
+
+/* 解答小棋盤 */
+#solution-board {
+  display: grid;
+  grid-template-rows: repeat(9, 1fr);
+  width: 100%;
+  max-width: 450px; /* 讓解答棋盤比主棋盤小 */
+  aspect-ratio: 1 / 1;
+  border: 2px solid var(--theme-color-dark);
+  border-radius: 4px;
+  overflow: hidden;
+}
+#solution-board .row {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+}
+#solution-board .cell {
+  border: 1px solid var(--border-color);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: clamp(0.7em, 2.2vh, 1.4em);
+  font-weight: bold;
+  color: var(--theme-color-dark);
+}
+#solution-board .row .cell:nth-child(3n):not(:last-child) { border-right: 2px solid var(--theme-color-dark); }
+#solution-board .row:nth-child(3n):not(:last-child) .cell { border-bottom: 2px solid var(--theme-color-dark); }
+
+/* 解答畫面的按鈕容器 */
+.solution-buttons {
+  display: flex;
+  gap: 15px;
+  width: 100%;
+  margin-top: auto; /* 將按鈕推到底部 */
+}
+.solution-buttons button {
+  flex: 1; /* 讓按鈕平分寬度 */
+  padding: 12px;
+  font-size: 1rem;
+  font-weight: 500;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  background-color: var(--theme-color-light);
+}
+.solution-buttons button:hover {
+  background-color: #a99a8d;
+}
+
+/* ✨ 新增：用於標示玩家答案錯誤的樣式 */
+.cell.player-error .main-value {
+  color: #dc3545 !important; /* 醒目的紅色 */
+  position: relative;
+}
+.cell.player-error .main-value::after {
+  content: '✗'; /* 新增一個小叉叉 */
+  position: absolute;
+  top: -8px;
+  right: -5px;
+  font-size: 0.8em;
+  line-height: 1;
+}
+
+#solution-board .cell.given-number {
+  background-color: #eae4dd; /* 與主棋盤的題目格顏色一致 */
+}
+
+#game-info-panel hr {
+  border: none;                 /* 步驟1：移除瀏覽器預設的邊框樣式，讓外觀更統一 */
+  height: 1px;                  /* 步驟2：設定您想要的線條高度（粗細），例如 1px, 2px... */
+  background-color: #eee;       /* 步驟3：設定線條的顏色，例如淺灰色 */
+  margin: 10px 0;               /* 步驟4 (可選)：調整線條上下的間距 */
+}
+
+/* --- 聊天室 --- */
+#tab-content-chat {
+    gap: 10px;
+}
+.chat-messages {
+    flex-grow: 1; /* 讓訊息區塊填滿垂直空間 */
+    border: 1px solid #eee;
+    border-radius: 6px;
+    padding: 8px;
+    overflow-y: auto;
+    background: #f9f9f9;
+    min-height: 100px;
+}
+.chat-input-container {
+    display: flex;
+    gap: 5px;
+    flex-shrink: 0;
+}
+.chat-input-container input {
+    flex-grow: 1;
+}
+
+/* --- 玩家列表 --- */
+.player-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: #f8f9fa;
+  border: 1px solid #eee;
+  border-radius: 6px;
+  font-size: 0.95em;
+}
+.player-status {
+  font-style: italic;
+  color: #6c757d;
+}
+.player-status.ready {
+  color: #28a745;
+  font-weight: bold;
+  font-style: normal;
+}
+
+#in-game-controls {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: 15px;
+}
+
+#in-game-controls,
+#multiplayer-waiting-panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+
+/* 確保「遊戲中」的畫面使用我們之前設計好的 Grid 佈局 */
+#in-game-controls {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: 15px;
+}
+
+/* ======================================== */
+/* ✨ 多人等待面板 (最終版) ✨             */
+/* ======================================== */
+
+/* 讓「等待面板」使用 Grid 佈局來安排它的內容 */
+#multiplayer-waiting-panel {
+  display: grid;
+  grid-template-rows: auto 1fr; /* 上方頁籤高度自動，下方內容填滿 */
+  gap: 15px; /* 在頁籤和內容之間增加一點間距 */
+}
+
+/* --- 頁籤按鈕容器 --- */
+#multiplayer-waiting-panel .tabs-container {
+  display: flex;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* --- 頁籤按鈕本身 --- */
+#multiplayer-waiting-panel .tab-button {
+  flex: 0 0 auto;
+  padding: 10px 20px;
+  background-color: #ffffff;
+  border: 1px solid var(--border-color); /* ✨ 核心修改：將邊框設為可見 ✨ */
+  border-bottom: none; /* 保持底部無邊框，才能與下方的橫線連接 */
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  cursor: pointer;
+  font-size: 1em;
+  font-weight: 500;
+  color: #888;
+  transition: all 0.2s;
+  margin: 0; 
+}
+
+/* --- 被選中 (active) 的頁籤按鈕 --- */
+#multiplayer-waiting-panel .tab-button.active {
+  background-color: #f8e9d3;
+  color: var(--theme-color-dark);
+  font-weight: bold;
+  border-color: var(--border-color);
+}
+
+/* --- 頁籤內容區塊 --- */
+#multiplayer-waiting-panel .tab-content {
+  display: none; /* 預設隱藏 */
+  background-color: white;
+  box-sizing: border-box;
+  overflow-y: auto;
+  min-height: 0; /* Grid/Flex 佈局中的重要修正 */
+}
+
+/* --- 被選中 (active) 的頁籤內容 --- */
+#multiplayer-waiting-panel .tab-content.active {
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- 聊天室 --- */
+#multiplayer-waiting-panel #tab-content-player-list,
+#multiplayer-waiting-panel #tab-content-chat {
+    gap: 10px;
+    padding: 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+#multiplayer-waiting-panel .chat-messages {
+    flex-grow: 1;
+    overflow-y: auto;
+    background: #fdf5ea;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #eee;
+}
+#multiplayer-waiting-panel .chat-input-container {
+    display: flex;
+    gap: 5px;
+    flex-shrink: 0;
+    align-items: stretch;
+}
+
+#multiplayer-waiting-panel .chat-input-container input {
+    flex-grow: 1;
+    margin: 0;
+}
+
+#multiplayer-waiting-panel .chat-input-container button {
+    margin: 0; /* 覆蓋全域按鈕的 margin */
+    white-space: nowrap;
+}
+
+
+.waiting-text-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  text-align: center;
+  color: var(--theme-color-dark, #5d534a);
+}
+.room-created-text {
+  font-size: 1.8em;
+  font-weight: bold;
+  margin: 0;
+}
+.waiting-for-players-text {
+  font-size: 1.1em;
+  color: #888;
+  margin-top: 10px;
+}
+
+
+/* --- 2. 加入請求面板的樣式 (置中覆蓋版) --- */
+
+/* 2.1 讓父容器可以作為定位基準 */
+.game-main-content {
+  position: relative;
+}
+
+/* 2.2 設定加入請求區塊本身為絕對定位的覆蓋層 */
+#sudoku-join-requests-area {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  
+  width: 90%;
+  max-width: 420px;
+  
+  background-color: white;
+  border-radius: 12px;
+  padding: 20px 25px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.25);
+  border: 1px solid #ddd;
+  z-index: 100; /* 確保它顯示在棋盤之上 */
+}
+
+/* 2.3 調整內部標題和列表的樣式 */
+#sudoku-join-requests-area h3 {
+  margin: 0 0 15px 0;
+  text-align: center;
+  font-size: 1.2em;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+}
+
+#sudoku-join-requests-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#sudoku-join-requests-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #eee;
+}
+#sudoku-join-requests-list li:last-child {
+  border-bottom: none;
+}
+
+/* 2.4 同意/拒絕按鈕的樣式 */
+.join-request-actions {
+    display: flex;
+    gap: 10px;
+}
+.join-request-actions button {
+    padding: 6px 14px;
+    font-size: 0.9em;
+    border: none;
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+}
+.accept-join-btn {
+    background-color: #28a745;
+}
+.reject-join-btn {
+    background-color: #dc3545;
+}
+
+/* 2.5 倒數計時器的樣式 */
+.countdown-timer {
+    color: #6c757d;
+    font-size: 0.9em;
+    font-style: italic;
+    min-width: 80px;
+    text-align: left;
+}
+
+#multiplayer-waiting-panel .player-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px; 
+}
+
+/* 列表中的每一個項目 */
+#multiplayer-waiting-panel .player-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px; /* 增加內邊距，讓文字不貼邊 */
+  background-color: #eedfcf;
+  border: 1px solid var(--border-color, #d3c9bc);
+  border-radius: 8px; /* 圓角 */
+  font-size: 1em;
+  transition: all 0.2s ease-in-out; /* 加入平滑的過渡效果 */
+}
+
+/* 滑鼠移到項目上時的效果 */
+#multiplayer-waiting-panel .player-list-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+  border-color: var(--color-accent, #c0b2a3);
+}
+
+/* 玩家名稱的樣式 */
+#multiplayer-waiting-panel .player-list-item span:first-child {
+  font-weight: 500;
+  color: var(--text-primary, #5d534a);
+}
+
+/* 玩家狀態的樣式 */
+#multiplayer-waiting-panel .player-status {
+  font-size: 0.9em;
+  font-style: italic;
+  color: var(--text-secondary, #757575);
+}
+
+#waiting-view {
+  width: 100%;
+  /* 關鍵：使用 padding-bottom 來維持 aspect ratio */
+  padding-bottom: 100%;
+  position: relative; /* 讓內部元素可以相對於此定位 */
+  border: 3px solid var(--theme-color-dark);
+  border-radius: 5px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  overflow: hidden; /* 確保內容超出時不會影響佈局 */
+}
+
+#waiting-view .waiting-text-container p {
+  margin: 5px 0;
+}
+
+#waiting-main-text {
+  font-size: 1.8em;
+  font-weight: bold;
+  color: var(--theme-color-dark, #5d534a);
+}
+
+#waiting-sub-text {
+  font-size: 1.1em;
+  color: #888;
+}
+
+#waiting-view .waiting-text-container {
+  position: absolute; /* 相對於 #waiting-view 定位 */
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%); /* 真正的置中 */
+  width: 90%;
+}
+
+#waiting-view #sudoku-start-game-btn {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80%;
+  max-width: 300px;
+  /* ✨ 注意：這裡不再設定 background-color */
+}
+
+/* 2. 外觀 (預設啟用狀態)：負責按鈕的顏色、字體等 */
+#sudoku-start-game-btn {
+  padding: 12px 30px;
+  font-size: 1.2em;
+  font-weight: bold;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  
+  /* 啟用時的土色系 */
+  background-color: #b79053;
+}
+
+/* 3. 滑鼠懸停效果：只在「非禁用」狀態下生效 */
+#sudoku-start-game-btn:not(:disabled):hover {
+  background-color: rgb(128, 101, 57); /* 稍深的土色 */
+  transform: translateY(-2px) translateX(-50%); /* ✨ 修正：合併 transform 效果 */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* 4. 禁用狀態：負責按鈕在禁用時的灰色外觀 */
+#sudoku-start-game-btn:disabled {
+  background-color: #6c757d; /* 灰色 */
+  color: #ccc;
+  cursor: not-allowed;
+  transform: translateX(-50%); /* ✨ 修正：禁用時也要保持水平置中 */
+  box-shadow: none;
+}
+
+.chat-messages {
+  flex-grow: 1;
+  overflow-y: auto;
+  background: #fdf5ea;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 12px; /* 每條訊息之間的間距 */
+}
+
+/* 單條訊息的容器 */
+.chat-message {
+  display: flex;
+  flex-direction: column;
+  max-width: 80%;
+  align-self: flex-start; /* 預設靠左對齊 */
+}
+
+/* 發送者名稱 */
+.sender-name {
+  font-size: 0.8em;
+  color: #888;
+  margin-bottom: 4px;
+  padding: 0 8px;
+  text-align: left;
+}
+
+/* 訊息內容氣泡 */
+.message-content {
+  margin: 0;
+  padding: 8px 12px;
+  background-color: #ffffff;
+  border-radius: 15px;
+  border: 1px solid var(--border-color);
+  word-wrap: break-word; /* 確保長單字或網址能換行 */
+  text-align: left;
+}
+
+/* --- 我自己發送的訊息 --- */
+.chat-message.my-message {
+  align-self: flex-end; /* 靠右對齊 */
+}
+
+.chat-message.my-message .sender-name {
+  text-align: right; /* 自己的名字也靠右 */
+}
+
+.chat-message.my-message .message-content {
+  background-color: var(--highlight-bg, #eed5b1); /* 使用主題高亮色 */
+}
+
+#multiplayer-waiting-panel .tab-button {
+  position: relative;
+}
+
+/* 2. 紅點本身的樣式 */
+#chat-notification-badge {
+  position: absolute;
+  top: 2px;     /* 距離頂部一點點 */
+  right: 5px;   /* 距離右邊一點點 */
+  
+  background-color: #ff3d50; /* 醒目的紅色 */
+  color: white;
+  
+  min-width: 18px; /* 確保單個數字時也是圓的 */
+  height: 18px;
+  padding: 0 5px;
+  box-sizing: border-box;
+
+  border-radius: 10px; /* 圓角 */
+  
+  font-size: 12px;
+  font-weight: bold;
+  line-height: 18px; /* 讓數字垂直置中 */
+  text-align: center;
+  
+  transition: transform 0.2s;
+}
+
+#chat-notification-badge.hidden {
+  transform: scale(0); /* 隱藏時縮小到看不見 */
+}
+
+#multiplayer-info {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0; /* 關鍵修正(2)：繼續向下傳遞高度限制 */
+}
+
+
+.no-opponents-text {
+  font-style: italic;
+  color: #888;
+  text-align: center;
+  padding: 10px 0;
+}
+
+.info-divider {
+  border: none;
+  height: 1px;
+  background-color: #eee;
+  margin: 15px 0;
+  flex-shrink: 0; /* 不要壓縮此區塊 */
+}
+
+/* 5. 遊戲內訊息顯示區塊，讓它在自己的容器內滾動 */
+.in-game-chat-messages {
+  flex-grow: 1; /* 填滿 #in-game-chat-container 的可用空間 */
+  overflow-y: auto; /* 內容超出時，顯示垂直捲軸 */
+  background: #fdf5ea;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  /* 底下是從之前複製過來的，確保樣式一致 */
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 6. 輸入框容器的樣式 (維持不變) */
+.in-game-chat-input {
+  display: flex;
+  gap: 5px;
+  flex-shrink: 0;
+}
+.in-game-chat-input input { flex-grow: 1; }
+
+#in-game-chat-container {
+  flex-grow: 1; /* 填滿剩餘空間 */
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* 關鍵修正(3)：最重要的修正！ */
+  gap: 10px;
+}
+
+/* 2. 訊息顯示區域 */
+.in-game-chat-messages {
+  flex-grow: 1;
+  overflow-y: auto; /* 當訊息過多時，顯示垂直捲軸 */
+  background: #fdf5ea;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 3. 輸入框與按鈕的容器 */
+.in-game-chat-input {
+  display: flex;
+  gap: 5px;
+  flex-shrink: 0; /* 防止此區塊在空間不足時被壓縮 */
+}
+.in-game-chat-input input {
+  flex-grow: 1; /* 讓輸入框填滿可用空間 */
+  min-width: 0; /* 防止輸入框在空間不足時溢出 */
+}
+.in-game-chat-input button {
+  flex-shrink: 0; /* 防止按鈕被壓縮 */
+}
+
+
+/* --- 修正：聊天氣泡文字換行問題 (通用) --- */
+
+/* 找到原本的 .message-content 樣式，並用這個版本取代或在其中加入 word-break 屬性 */
+.message-content {
+  margin: 0;
+  padding: 8px 12px;
+  background-color: #ffffff;
+  border-radius: 15px;
+  border: 1px solid var(--border-color);
+  text-align: left;
+  
+  /* ▼▼▼▼▼ 核心修正 ▼▼▼▼▼ */
+  word-wrap: break-word;   /* 處理一般單字換行 */
+  word-break: break-all; /* 強制長串無意義字符 (像您的222...) 換行 */
+  /* ▲▲▲▲▲ 核心修正 ▲▲▲▲▲ */
+}
+
+/* 確保「我的訊息」氣泡也有同樣的效果 */
+.chat-message.my-message .message-content {
+  background-color: var(--highlight-bg, #eed5b1);
+}
+
+#game-info-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* 關鍵修正(1)：防止其在內容過多時被撐開 */
+}
+
+.in-game-tabs-container {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+
+/* 2. 頁籤按鈕本身 */
+.in-game-tab-button {
+  padding: 8px 14px; /* 微調內邊距 */
+  border: 1px solid transparent;
+  border-bottom: none;
+  background-color: transparent;
+  cursor: pointer;
+  font-size: 0.95em; /* 稍微加大字體 */
+  font-weight: 500;
+  color: #888;
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+  transition: all 0.2s;
+  margin: 4px;
+  /* ✨ 核心修正：防止文字換行 */
+  white-space: nowrap; 
+}
+
+
+/* 3. 被選中 (active) 的頁籤按鈕 */
+.in-game-tab-button.active {
+  background-color: #e8cda6;
+  color: var(--theme-color-dark);
+  font-weight: bold;
+  border-color: var(--border-color);
+  /* ✨ 新增：讓被選中的頁籤有輕微的立體感 */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  transform: translateY(1px); /* 輕微下移，與底線連接得更自然 */
+}
+
+/* 3. 滑鼠懸停在「未選中」的按鈕上時的效果 */
+.in-game-tab-button:not(.active):hover {
+    background-color: #dbccb3; /* <-- 就是修改這裡的顏色碼 */
+    color: var(--theme-color-dark);
+}
+
+/* 4. 頁籤內容面板 */
+.in-game-tab-content {
+  display: none; /* 預設隱藏所有內容面板 */
+  flex-grow: 1;
+  min-height: 0; /* 再次確保高度限制能傳遞下去 */
+  overflow: hidden; /* ✨ 新增：確保子元素的圓角裁切正確 */
+  border-radius: 8px;
+}
+
+/* 5. 被選中 (active) 的內容面板 */
+.in-game-tab-content.active {
+  display: flex; /* 只顯示 active 的面板 */
+  flex-direction: column;
+}
+
+/* 6. 確保聊天室容器在頁籤內能正常運作 */
+#tab-content-chat #in-game-chat-container {
+    height: 100%;
+}
+
+#tab-content-lobby-player-list,
+#tab-content-lobby-chat {
+    gap: 10px;
+    padding: 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+
+#game-info-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 2. 讓 #multiplayer-info (頁籤系統的總容器) 填滿 #game-info-panel 的所有空間 */
+#multiplayer-info {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* 3. 讓頁籤內容的「包裝容器」填滿剩餘空間 */
+#multiplayer-info .in-game-tab-content-wrapper {
+  flex-grow: 1;
+  position: relative;
+  min-height: 0;
+}
+
+/* 4. 讓被選中的頁籤內容 (例如聊天室) 填滿整個「包裝容器」 */
+.in-game-tab-content.active {
+  display: flex;
+  flex-direction: column;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* 5. 讓聊天室主容器填滿整個頁籤內容區塊 */
+#tab-content-ingame-chat #in-game-chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 10px;
+}
+
+/* 6. 最關鍵的一步：讓訊息區塊填滿聊天室的剩餘空間，並在超出時捲動 */
+.in-game-chat-messages {
+  flex-grow: 1;
+  overflow-y: auto; /* 核心功能：內容超出時啟用捲軸 */
+  min-height: 0; /* 防止被內容撐開 */
+}
+
+.in-game-tab-content.active {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 2. 讓進度條容器能填滿空間並有內邊距 */
+#tab-content-ingame-progress {
+  padding: 10px 5px; /* 增加一些內邊距，避免進度條貼邊 */
+  justify-content: flex-start; /* 從頂部開始排列 */
+  overflow-y: auto; /* 如果對手過多，可以滾動 */
+}
+
+/* 3. 對手進度條容器本身的樣式 */
+#opponent-progress-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px; /* 每個進度條之間的垂直間距 */
+}
+
+/* 4. 單個進度條項目的樣式 (之前可能已有，此為確保版本) */
+.opponent-progress-item {
+  display: grid;
+  /* ✨ 核心修正：重新定義欄位的寬度 */
+  grid-template-columns: auto 120px 1fr auto;
+  /* 欄位分別是：   (名次) (名字) (進度條) (百分比) */
+  
+  gap: 8px;
+  align-items: center;
+  font-size: 0.9em;
+}
+
+.opponent-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 我們也需要為 progress-item 內部的元素指定它們屬於哪個欄位 */
+/* 雖然在這裡不是絕對必要，但這是更穩固的寫法 */
+.opponent-progress-item > .rank { grid-column: 1; }
+.opponent-progress-item > .opponent-name { grid-column: 2; }
+.opponent-progress-item > .progress-bar { grid-column: 3; }
+.opponent-progress-item > .progress-percentage { grid-column: 4; }
+
+.opponent-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+
+.progress-bar {
+  flex-grow: 1;
+  height: 14px;
+  background-color: #eae4dd;
+  border-radius: 7px;
+  overflow: hidden;
+  border: 1px solid #d3c9bc;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background-color: var(--theme-color-dark);
+  border-radius: 7px;
+  transition: width 0.3s ease-in-out;
+}
+
+.progress-percentage {
+  font-weight: bold;
+  font-size: 0.9em;
+  color: var(--theme-color-dark);
+  text-align: right;
+}
+
+.no-opponents-text {
+  font-style: italic;
+  color: #888;
+  text-align: center;
+  padding: 20px 0;
+}
+
+.game-start-countdown {
+    text-align: center;
+    color: var(--theme-color-dark);
+    user-select: none; /* 防止使用者選取倒數文字 */
+}
+#countdown-message {
+    font-size: 2em;
+    margin-bottom: 10px;
+    animation: fadeIn 0.5s;
+}
+#countdown-timer {
+    font-size: 4em;
+    font-weight: bold;
+    animation: popIn 1s infinite;
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes popIn {
+  0% { transform: scale(0.8); opacity: 0.8; }
+  50% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(0.8); opacity: 0.8; }
+}
+
+/* --- 遊戲開始倒數覆蓋層 (確保置中) --- */
+
+ /* 1. 讓 .game-main-content 成為定位基準 */
+ .game-main-content {
+   position: relative;
+ }
+ 
+ /* 2. 設定覆蓋層本身的樣式 */
+ #countdown-overlay {
+   position: absolute;
+   top: 0;
+   left: 0;
+   width: 100%;
+   height: 100%;
+   text-shadow: 0px 2px 5px rgba(149, 149, 149, 0.5);
+   display: flex;
+   flex-direction: column;
+   justify-content: center;
+   align-items: center;
+   z-index: 100; /* 確保在最上層 */
+   border-radius: 5px;
+   text-align: center;
+   user-select: none;
+ }
+ 
+ #loading-text-animation {
+   font-size: 1.5em;
+   font-style: italic;
+   margin-bottom: 20px;
+   min-height: 30px;
+ }
+ 
+ #countdown-timer {
+   font-size: 3.5em;
+   font-weight: bold;
+   margin: 0;
+   animation: popIn 1s infinite;
+ }
+ 
+ @keyframes popIn {
+   0% { transform: scale(0.9); }
+   50% { transform: scale(1.1); }
+   100% { transform: scale(0.9); }
+ }
+
+ .pause-text-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.pause-text-container h2 {
+  margin-bottom: 10px;
+  font-size: 1.8em;
+}
+
+.pause-text-container p {
+  margin: 0;
+  font-size: 1em;
+  color: #666;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 80%;
+  max-width: 400px;
+  text-align: center;
+}
+
+#loading-text-animation {
+  font-size: 1.5em;
+  color: var(--theme-color-dark);
+  margin-bottom: 15px;
+  min-height: 30px; /* 防止文字切換時跳動 */
+}
+
+.loading-container .progress-bar-container {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+}
+
+.loading-container .progress-bar {
+  flex-grow: 1;
+  height: 14px;
+  background-color: #eae4dd;
+  border-radius: 7px;
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+/* 我們可以沿用遊戲中已有的 .progress-bar-fill 樣式 */
+/* #generation-progress-bar-fill {} */
+
+#generation-progress-bar-fill {
+  height: 100%;
+  background-color: var(--theme-color-dark);
+  border-radius: 6px;
+  transition: width 0.3s ease-in-out;
+  width: 0%; /* 確保初始寬度為 0%，覆蓋掉任何來自 class 的樣式 */
+}
+
+.loading-container #generation-progress-percentage {
+  font-size: 0.9em;
+  font-weight: bold;
+  color: var(--theme-color-dark);
+  min-width: 40px; /* 確保寬度一致 */
+  text-align: right;
+}
+
+.opponent-progress-item.is-me .opponent-name {
+  font-weight: bold;
+  color: var(--theme-color-dark);
+}
+
+.opponent-progress-item.is-me .progress-bar-fill {
+  background-color: #c29c13; /* 使用您主題中的高亮色 */
+}
+
+#player-name-display {
+  color: #a99a8d;       /* 使用一個較淺的棕灰色 */
+  font-size: 0.85em;      /* 縮小字體 */
+  font-weight: 500;
+  text-align: right;    /* 靠右對齊 */
+  margin-right: 5px;    /* 與計時器稍微拉開距離 */
+  
+  /* 將它定位在計時器的正上方 */
+  position: absolute;
+  top: -18px; /* 向上移動，您可以微調這個數值 */
+  right: 0;
+}
+
+/* 讓 timer-container 可以作為定位基準 */
+#timer-container {
+  position: relative;
+}
+
+.in-game-tabs-container .in-game-tab-button {
+  position: relative;
+}
+
+/* 2. 紅點本身的樣式 (與大廳的紅點樣式共用) */
+#ingame-chat-notification-badge {
+  position: absolute;
+  top: 1px;
+  right: 2px;
+  background-color: #dc3545;
+  color: white;
+  min-width: 16px; /* 尺寸微調以適應較小的頁籤 */
+  height: 16px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: bold;
+  line-height: 16px;
+  text-align: center;
+  transition: transform 0.2s;
+}
+
+#ingame-chat-notification-badge.hidden {
+  transform: scale(0);
+}
+
+#win-stats-container {
+  margin: 25px 0; /* 上下邊距 */
+  padding: 15px;
+  border-top: 1px solid #eee;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  flex-direction: column;
+  gap: 10px; /* 每個項目之間的間距 */
+}
+
+.win-stat-item {
+  display: flex;
+  justify-content: space-between; /* 讓標籤和數值分列左右 */
+  font-size: 1em;
+}
+
+.stat-label {
+  color: #555;
+  font-weight: 500;
+}
+
+.stat-value {
+  color: var(--theme-color-dark);
+  font-weight: bold;
+}
+
+.opponent-progress-item.finished .progress-bar,
+.opponent-progress-item.finished .progress-percentage {
+  display: none; /* 完成後隱藏進度條 */
+}
+.finish-time {
+  font-size: 0.9em;
+  font-weight: bold;
+  color: #28a745; /* 綠色表示完成 */
+  text-align: right;
+}
+.rank {
+  font-weight: bold;
+  color: var(--theme-color-dark);
+}
+#custom-modal-overlay ol {
+  text-align: left;
+  margin-left: 30px;
+}
+
+.progress-percentage {
+  white-space: nowrap;
+}
+
+#tab-content-ingame-progress,
+#tab-content-ingame-chat {
+  background-color: #fdf5ea; /* 設定一個不透明的背景色 */
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+#retry-fetch-btn {
+  margin-top: 20px;
+  padding: 10px 25px;
+  font-size: 1em;
+  font-weight: 500;
+  color: white;
+  background-color: var(--theme-color-dark);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+#retry-fetch-btn:hover {
+  background-color: #4a443c;
+}
+
+#number-palette .control-key {
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  background-color: #ffffff; 
+  transition: all 0.2s;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1em;
+  font-weight: 500;
+  color: var(--theme-color-dark);
+}
+
+#number-palette .control-key:hover {
+  background-color: #e2d8ce;
+  transform: translateY(-1px);
+}
+
+
+#number-palette .control-key[disabled] {
+  background-color: #f8f5f0;
+  color: #ccc;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Undo 按鈕佔據左下角的位置 */
+#undo-btn {
+  grid-column: 1 / span 1;
+}
+
+
+
+#number-palette .delete-key {
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  background-color: var(--theme-color-light);
+  transition: background-color 0.2s;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.2em;
+  color: var(--theme-color-dark);
+}
+
+#number-palette .delete-key:hover {
+  background-color: #c3a78a;
+}
+
+.player-status-text {
+  text-align: right;
+  font-style: italic;
+  font-weight: bold;
+  font-size: 0.9em;
+}
+
+.player-status-text.surrendered {
+  color: #dc3545; /* 醒目的紅色 */
+}
+
+.player-status-text.disconnected {
+  color: #6c757d; /* 中性的灰色 */
+}
+
+.opponent-progress-item.spectatable {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.opponent-progress-item.spectatable:hover {
+  background-color: #e2d8ce;
+}
+
+/* 正在觀戰的項目加上邊框 */
+.opponent-progress-item.spectating {
+  border: 2px solid #fd850d;
+  background-color: #fdf5ea;
+}
+
+.opponent-progress-item.spectating {
+  background-color: rgba(253, 133, 13, 0.15); /* 柔和的橘色半透明背景 (您可以調整 0.15 來改變深淺) */
+  border-radius: 6px; /* 加上一點圓角更好看 */
+  border: 1px solid rgba(253, 133, 13, 0.3); /* 可以搭配一個淡淡的同色系邊框 */
+  outline: none; /* 確保沒有舊的輪廓線 */
+}
+
+/* (可選) 讓滑鼠移到可觀戰項目上時，也有一個預覽背景色 */
+.opponent-progress-item.spectatable:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* 讓觀戰時的棋盤內容可以顯示在橫幅下方 */
+
+
+/* 如果棋盤是 is-loading 狀態，則不需要這個內邊距 */
+#game-board.is-loading {
+    padding-top: 0;
+}
+
+.spectator-text {
+  font-weight: bold;
+  color: #fd850d; /* 使用一個醒目的橘色 */
+  font-size: 1.0em;
+  animation: pulse 1.5s infinite; /* 讓文字有輕微的呼吸效果，更醒目 */
+}
+
+.extreme-challenge {
+  margin-top: 15px;
+  background: linear-gradient(45deg, #ff8a00, #e52e71);
+  color: white;
+  border: none;
+  font-weight: bold;
+  box-shadow: 0 4px 15px rgba(255, 82, 137, 0.4);
+  transition: all 0.3s ease;
+}
+
+.extreme-challenge:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(255, 82, 137, 0.6);
+}
+
+.cell.opponent-selected {
+  background-color: #cce5ff !important; /* 一個柔和的藍色 */
+  outline: 2px solid #007bff;
+}
+
+/* 用於標示被觀戰者選中的行列高亮 */
+.cell.opponent-highlight-rc {
+  background-color: #e6f2ff !important;
+}
+
+#undo-btn {
+  grid-row: 4; /* <-- 新增或確認此行 */
+  grid-column: 1 / span 1;
+}
+
+/* 取消復原按鈕佔據第 4 列、第 2 欄 */
+#redo-btn {
+  grid-row: 4; /* <-- 新增或確認此行 */
+  grid-column: 2 / span 1;
+  
+}
+
+/* 刪除按鈕佔據第 4 列、第 3 欄 */
+#number-palette .delete-key {
+  grid-row: 4; /* <-- 新增或確認此行 */
+  grid-column: 3 / span 1;
+}
+
+.control-button-style { background-color: #fff;}
+
+.cell.error .main-value {
+  color: #dc3545 !important; /* 將數字變為醒目的紅色 */
+  font-weight: bold;
+}
+
+.keybindings-info {
+  margin-top: 10px; /* 和上面的區塊拉開一點距離 */
+  padding-top: 10px;
+  border-top: 2px solid #d8d8d8; /* 加一條分隔線 */
+}
+
+.keybindings-info p {
+  font-size: 0.65em; /* 讓字小一點，不那麼搶眼 */
+  color: #555;
+  line-height: 1.6; /* 增加行高，更容易閱讀 */
+}
+
+.keybindings-info f {
+  font-size: 0.65em; /* 讓字小一點，不那麼搶眼 */
+  color: #555;
+  line-height: 1.6; /* 增加行高，更容易閱讀 */
+}
+
+.keybindings-info .key-combo {
+  display: inline-block;
+  font-weight: bold;
+  color: var(--theme-color-dark);
+  min-width: 140px; /* 讓按鍵名稱對齊 */
+}
+
+#single-player-info hr {
+  /* margin 的第一個值代表「上下間距」，第二個值代表「左右間距」。
+     你可以自由地把 20px 這個數值改成你喜歡的大小，
+     例如 10px (間距變小) 或 30px (間距變大)。
+  */
+  margin: 10px 0; 
+
+  border: none;
+  
+  /* 2. 設定你想要的線條高度（粗細） */
+  height: 2px; /* 你可以改成 1px (變細), 3px (變粗) 等 */
+  
+  /* 3. 設定線條的顏色 */
+  background-color: #d8d8d8;
+  
+}
+
+#game-board.telescope-mode .cell .pencil-grid {
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.1s ease-in-out, visibility 0s linear 0.1s;
+}
+#game-board.telescope-mode .cell.selected .pencil-grid {
+  visibility: visible;
+  opacity: 1;
+  transition-delay: 0s;
+}
+
+#lottery-modal-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(0, 0, 0, 0.85); /* 更深的背景 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    backdrop-filter: blur(8px);
+}
+
+#lottery-machine {
+    background-color: #2c2c2c;
+    color: white;
+    padding: 30px 50px;
+    border-radius: 20px;
+    border: 5px solid #d4af37; /* 金色邊框 */
+    box-shadow: 0 0 35px rgba(255, 215, 0, 0.7); /* 更強的光暈 */
+    text-align: center;
+}
+
+#lottery-machine h3 {
+    margin: 0 0 25px 0;
+    font-size: 2.2em;
+    color: #ffd700; /* 亮金色標題 */
+    text-shadow: 0 0 10px #ff8c00;
+}
+
+.reels-container {
+    display: flex;
+    gap: 15px; /* 輪盤間距 */
+    margin-bottom: 25px;
+}
+
+.reel-container {
+    width: 90px;
+    height: 100px;
+    background: #1a1a1a;
+    border: 2px solid #555;
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+}
+
+.reel {
+    position: absolute;
+    width: 100%;
+}
+
+.reel.spinning {
+    /* 動畫：持續0.5秒，以 ease-in-out 的速度曲線無限次播放 */
+    animation: spin 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+}
+
+.reel-item {
+    height: 100px; /* 與容器高度一致 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 3em;
+}
+
+#lottery-result-text {
+    font-size: 1.3em;
+    color: #eee;
+    min-height: 28px;
+    font-weight: bold;
+}
+
+/* 定義轉動的動畫 */
+@keyframes spin {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-100%); }
+}
+
+/* --- 棋盤風暴交換時的閃爍特效 --- */
+.cell.flash-swap {
+  animation: flash-animation 0.5s ease-in-out;
+}
+
+@keyframes flash-animation {
+  0% { background-color: transparent; }
+  50% { background-color: #e7ac7d; box-shadow: 0 0 15px #9f8741; }
+  100% { background-color: transparent; }
+}
+
+#lottery-lever {
+    display: block;
+    margin: 20px auto;
+    width: 60px;
+    height: 120px;
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    position: relative;
+    padding: 0;
+    transition: transform 0.2s ease-out;
+}
+
+#lottery-lever .lever-arm {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 8px;
+    height: 100px;
+    background: linear-gradient(to right, #7d7d7d, #cccccc, #7d7d7d);
+    border-radius: 4px;
+}
+
+#lottery-lever .lever-handle {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 40px;
+    background: radial-gradient(circle at 30% 30%, #ff7b7b, #e00000);
+    border-radius: 50%;
+    border: 3px solid #f0f0f0;
+    box-shadow: 0 0 10px rgba(255, 0, 0, 0.7);
+}
+
+#lottery-lever:hover {
+    transform: scale(1.05);
+}
+
+#lottery-lever:active {
+    transform: scale(0.95) rotate(10deg);
+}
+
+#lottery-lever.disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+    pointer-events: none; /* 徹底禁用點擊 */
+}
+
+.mode-select-btn {
+  flex: 1; /* 讓兩個按鈕平分寬度 */
+  padding: 15px;
+  border-radius: 10px;
+  border: 2px solid #eae4dd;
+  background-color: #fdfdfd;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  text-align: left;
+}
+
+/* 滑鼠懸停效果 */
+.mode-select-btn:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+  border-color: #edddcd;
+  background-color: #f0ebe5; 
+}
+
+/* 按鈕內部的標題 (h4) 和描述 (span) 樣式 */
+.mode-select-btn h4 {
+  margin: 0 0 5px 0;
+  font-size: 1.2em;
+  color: #2d231a;
+}
+
+.mode-select-btn span {
+  font-size: 0.9em;
+  color: #85796e;
+}
+
+
+#sudoku-mode-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1001; /* 確保在其他元件之上 */
+}
+
+/* 中間的白色對話框 */
+#sudoku-mode-modal {
+  background-color: white;
+  padding: 25px 40px;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.25);
+  min-width: 300px;
+  max-width: 600px;
+}
+
+#sudoku-mode-modal h3 {
+  margin-top: 0;
+  margin-bottom: 25px;
+  font-weight: 600;
+}
