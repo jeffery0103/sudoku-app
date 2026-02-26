@@ -2418,128 +2418,195 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
 
 
 /* ==========================================================
-   📱 1. 手機直向完美排版 (貼合螢幕 100% 滿版無滾動)
+   📱 1. 終極手機直向排版：精準 50/50 完美分割
    ========================================================== */
 @media screen and (max-width: 768px) {
-    /* 1. 鎖死畫面，不給上下滑動，完美貼合手機螢幕 (支援 dvh) */
-    body {
+    /* 1. 徹底歸零所有外層容器的邊距，奪回 100% 的畫面控制權 */
+    body, html {
         padding: 0 !important;
-        overflow: hidden !important; 
+        margin: 0 !important;
+        overflow: hidden !important; /* 絕對禁止整體畫面滾動 */
+        height: 100dvh !important;
     }
 
-    #app-container {
-        height: 100dvh !important; /* ✨ 使用 dvh 解決手機瀏覽器網址列遮擋問題 */
+    .container, #app-container {
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100vw !important;
+        height: 100dvh !important;
+        max-width: 100% !important;
         max-height: 100dvh !important;
-        padding: 5px !important;
-        box-sizing: border-box !important;
+        border-radius: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
     }
 
+    /* 2. 主容器：設定為上下排列，佔滿 100dvh */
     .main-container {
-        flex-direction: column !important;
-        align-items: center !important;
-        gap: 6px !important; 
-        padding-bottom: 0 !important;
-        height: 100% !important;
-        overflow: hidden !important;
-    }
-
-    /* 2. 上方棋盤卡片 (彈性縮放，把剩下的空間都吃掉) */
-    .game-wrapper {
-        flex: 1 1 auto !important; 
-        width: 100% !important;
-        max-width: 500px !important;
-        padding: 8px !important;
-        box-sizing: border-box !important;
         display: flex !important;
         flex-direction: column !important;
-        min-height: 0 !important; /* ✨ 這是讓棋盤能縮小的核心關鍵 */
+        height: 100dvh !important;
+        width: 100% !important;
+        gap: 0 !important; 
+        padding: 0 !important;
+        margin: 0 !important;
+        background-color: var(--bg-color-light) !important;
     }
 
-    .game-main-content {
-        flex: 1 1 auto !important;
+    /* ======================================= */
+    /* 🎲 上半部：棋盤區 (精準佔用上方 50%) */
+    /* ======================================= */
+    .game-wrapper {
+        flex: 0 0 50dvh !important; /* ✨ 核心：強制高度為畫面的一半 */
+        height: 50dvh !important;
+        width: 100% !important;
+        padding: 10px 15px !important;
+        box-sizing: border-box !important;
         display: flex !important;
         flex-direction: column !important;
         justify-content: center !important;
-        min-height: 0 !important;
+        align-items: center !important;
+        background-color: transparent !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+    }
+
+    .game-main-content {
+        width: 100% !important;
+        height: 100% !important;
+        max-width: 450px !important; /* 在大手機上不要太寬 */
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        align-items: center !important;
     }
 
     .title-container {
         flex: 0 0 auto !important;
+        width: 100% !important;
         margin-bottom: 5px !important;
-        font-size: 0.9em !important; 
     }
 
-    /* 3. 🌟 修復棋盤被切掉：加入 border-box 並嚴格維持比例 */
+    /* ✨ 拯救變形的棋盤：強制正方形魔法 */
     #game-board {
+        /* 寬度最大為 100%，高度交給 aspect-ratio 自動推算 */
         width: 100% !important;
         height: auto !important;
-        /* ✨ 動態計算最大寬度：不能超過螢幕高度減去控制面板的高度 */
-        max-width: min(100%, calc(100dvh - 280px)) !important; 
-        aspect-ratio: 1 / 1 !important;
+        /* 但是寬度絕對不能超過「上半部剩餘的高度」，否則會把下面擠掉 */
+        /* 上半部是 50dvh，扣掉 padding 跟標題大約剩 40dvh */
+        max-width: min(100%, 40dvh) !important; 
+        aspect-ratio: 1 / 1 !important; /* ✨ 強制完美的正方形 */
         margin: 0 auto !important; 
-        box-sizing: border-box !important; /* ✨ 解決邊框吃掉最後一行的問題 */
-    }
-
-    .row, .cell {
         box-sizing: border-box !important;
+        border: 3px solid var(--theme-color-dark) !important;
     }
-
-    /* 4. 下方控制卡片 (保留需要的最小高度，不會被無限壓縮) */
-    .controls-wrapper {
-        flex: 0 0 auto !important; 
-        width: 100% !important;
-        max-width: 500px !important;
-        padding: 8px 12px !important;
+    
+    /* 確保裡面的格子不會被壓扁 */
+    .row, .cell {
         box-sizing: border-box !important;
         min-height: 0 !important;
     }
 
-    /* 5. 優化控制面板：解開數字鍵盤的肥大 padding */
-    .upper-controls {
-        grid-template-columns: 1fr 1fr !important;
-        gap: 10px !important;
-        height: auto !important;
+    /* ======================================= */
+    /* 🎛️ 下半部：控制區 (精準佔用下方 50%) */
+    /* ======================================= */
+    .controls-wrapper {
+        flex: 0 0 50dvh !important; /* ✨ 核心：強制高度為畫面的一半 */
+        height: 50dvh !important;
+        width: 100% !important;
+        padding: 15px !important;
+        box-sizing: border-box !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: flex-start !important;
+        align-items: center !important;
+        background-color: white !important;
+        border-radius: 20px 20px 0 0 !important; /* ✨ 上方加圓角，看起來像個抽屜面板 */
+        box-shadow: 0 -4px 15px rgba(0,0,0,0.08) !important; /* 上方加一點陰影 */
     }
 
+    #in-game-controls {
+        width: 100% !important;
+        max-width: 450px !important;
+        height: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 10px !important;
+    }
+
+    .upper-controls {
+        flex: 1 1 auto !important; /* 吸收剩下所有的高度 */
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 15px !important;
+        min-height: 0 !important;
+    }
+
+    .control-quadrant {
+        display: flex !important;
+        flex-direction: column !important;
+        min-height: 0 !important;
+    }
+    
     .control-quadrant h3 {
         margin: 0 0 5px 0 !important;
-        padding: 2px 0 !important;
-        font-size: 0.95em !important;
+        padding: 0 0 5px 0 !important;
     }
 
+    /* 數字鍵盤區：讓按鈕自動塞滿空間，不要爆出去 */
     #number-palette {
-        height: 100% !important;
-        gap: 4px !important;
+        flex: 1 1 auto !important;
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 5px !important;
+        min-height: 0 !important;
+        padding: 0 !important;
     }
 
-    /* ✨ 讓數字按鈕自動適應網格高度，不被 padding 撐爆 */
     #number-palette .number, 
     #number-palette .control-key, 
     #number-palette .delete-key {
-        padding: 0 !important; 
-        min-height: 30px !important; 
-        height: 100% !important; 
-        font-size: 1.1rem !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        height: 100% !important; /* 讓按鈕高度填滿網格 */
+        min-height: 0 !important;
+        font-size: 1.2rem !important;
     }
 
-    /* 6. 底部按鈕區再縮緊一點 */
+    /* 底部按鈕區 */
     .lower-controls {
+        flex: 0 0 auto !important;
+        display: grid !important;
         grid-template-columns: 1fr 1fr 1fr !important;
-        gap: 5px !important;
-        margin-top: 5px !important;
+        grid-template-rows: auto auto !important;
+        gap: 8px !important;
     }
-    
+
     .lower-controls > button, 
     .switch-control {
-        padding: 6px 4px !important;
-        font-size: 0.85rem !important;
+        padding: 8px 4px !important;
+        font-size: 0.9rem !important;
     }
 
-    .keybindings-info {
-        display: none !important;
+    /* ======================================= */
+    /* 🚫 隱藏與彈窗修復區 (維持原有功能) */
+    /* ======================================= */
+    .keybindings-info { display: none !important; }
+
+    #difficulty-buttons, #sudoku-mode-buttons {
+        flex-direction: column !important; 
+        gap: 12px !important; 
+    }
+    .difficulty-btn, .mode-select-btn {
+        width: 100% !important;
+        box-sizing: border-box !important;
+        padding: 15px 20px !important; 
+    }
+    #difficulty-modal, #sudoku-mode-modal, #custom-modal, #alert-modal, #win-modal, #multiplayer-join-modal {
+        width: 92% !important;
+        max-height: 90vh !important; 
+        overflow-y: auto !important;
+        padding: 20px 15px !important;
     }
 }
 
