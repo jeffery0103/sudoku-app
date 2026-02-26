@@ -2419,54 +2419,79 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
 /* ==========================================================
    📱 1. 手機直向完美排版 (當螢幕寬度小於 768px 時)
    ========================================================== */
+/* ==========================================================
+   📱 1. 手機直向完美排版 (當螢幕寬度小於 768px 時自動觸發)
+   ========================================================== */
 @media screen and (max-width: 768px) {
-    /* 解除 16:9 比例與高度鎖定，讓內容可以往下延伸 */
-    #app-container {
+    /* 1. 徹底解除所有「高度」、「比例」與「寬度」的致命封印 */
+    #app-container, 
+    .main-container, 
+    .game-wrapper, 
+    .controls-wrapper {
         aspect-ratio: auto !important;
         height: auto !important;
-        min-height: 100vh !important;
         max-height: none !important;
-        max-width: 100% !important;
-        padding: 5px !important;
+        min-height: 0 !important;
     }
 
-    /* 將棋盤與控制面板折成「上下疊加」 */
+    /* 2. 主容器改為「上下排列」，並拉開兩塊白色卡片的間距 */
     .main-container {
         flex-direction: column !important;
-        gap: 15px !important;
-        height: auto !important;
+        align-items: center !important;
+        gap: 20px !important; 
+        padding-bottom: 20px !important;
     }
 
-    /* 讓兩大區塊佔滿手機寬度 */
-    .game-wrapper, .controls-wrapper {
+    /* 3. 完美重現你的示意圖：兩塊白色卡片等寬、置中、內縮適當比例 */
+    .game-wrapper, 
+    .controls-wrapper {
         width: 100% !important;
-        max-width: 100% !important;
-        margin: 0 auto !important;
-        height: auto !important;
+        max-width: 500px !important; /* 限制最大寬度，在大螢幕手機上才不會太肥 */
+        padding: 15px !important;
+        box-sizing: border-box !important;
+        display: block !important; /* 解除 flex stretch 的干擾 */
     }
 
-    /* 上方控制區 (數字鍵 vs 資訊) - 給予適當比例並排 */
-    .upper-controls {
-        grid-template-columns: 1fr 1.2fr !important;
-        gap: 10px !important;
+    /* 4. 拯救消失的棋盤！強制棋盤寬度 100% 並維持正方形 */
+    .game-main-content {
+        max-width: 100% !important;
     }
-    
-    /* 縮小一點按鈕內距與字體，避免擠出去 */
+    #game-board {
+        width: 100% !important;
+        height: auto !important;
+        aspect-ratio: 1 / 1 !important;
+    }
+
+    /* 5. 優化控制面板內部：讓數字鍵盤跟遊戲資訊完美對半排 */
+    .upper-controls {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 15px !important;
+        display: grid !important;
+    }
+
+    /* 確保數字按鈕維持九宮格比例，字體大小適中 */
     #number-palette .number, 
     #number-palette .control-key, 
     #number-palette .delete-key {
+        font-size: 1.2rem !important;
         padding: 8px 0 !important;
-        font-size: 1.1em !important;
     }
 
-    /* 下方輔助按鈕區 - 排成整齊的 2x3 網格 */
+    /* 下方開關與按鈕區：排成整齊的三欄式 */
     .lower-controls {
-        grid-template-columns: 1fr 1fr !important;
-        grid-template-rows: auto !important;
+        grid-template-columns: 1fr 1fr 1fr !important;
+        grid-template-rows: auto auto !important;
         gap: 8px !important;
     }
+    
+    .lower-controls > button, 
+    .switch-control {
+        padding: 10px 5px !important;
+        font-size: 0.95rem !important;
+        justify-content: center !important;
+    }
 
-    /* 隱藏沒用的快捷鍵說明 */
+    /* 隱藏佔空間的快捷鍵說明 (手機本來就沒有實體鍵盤) */
     .keybindings-info {
         display: none !important;
     }
