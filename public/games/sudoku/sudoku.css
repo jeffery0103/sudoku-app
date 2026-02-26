@@ -2300,6 +2300,7 @@ input:checked + .slider:before {
 /* 4. 🌟 美化醜醜的預設滑桿 */
 input[type=range]#custom-holes-slider {
     -webkit-appearance: none;
+    appearance: none;
     width: 100%;
     background: transparent;
     margin: 20px 0;
@@ -2323,6 +2324,7 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb {
     background: #ffffff;
     cursor: pointer;
     -webkit-appearance: none;
+    appearance: none;
     margin-top: -10px; /* 讓把手置中於軌道 */
     box-shadow: 0 2px 6px rgba(0,0,0,0.3);
     transition: transform 0.1s;
@@ -2412,4 +2414,88 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
 
 #custom-modal-overlay {
     z-index: 999999 !important; /* 確保大於房號輸入框的 1001 */
+}
+
+/* ==========================================================
+   📱 1. 手機直向完美排版 (當螢幕寬度小於 768px 時)
+   ========================================================== */
+@media screen and (max-width: 768px) {
+    /* 解除 16:9 比例與高度鎖定，讓內容可以往下延伸 */
+    #app-container {
+        aspect-ratio: auto !important;
+        height: auto !important;
+        min-height: 100vh !important;
+        max-height: none !important;
+        max-width: 100% !important;
+        padding: 5px !important;
+    }
+
+    /* 將棋盤與控制面板折成「上下疊加」 */
+    .main-container {
+        flex-direction: column !important;
+        gap: 15px !important;
+        height: auto !important;
+    }
+
+    /* 讓兩大區塊佔滿手機寬度 */
+    .game-wrapper, .controls-wrapper {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 auto !important;
+        height: auto !important;
+    }
+
+    /* 上方控制區 (數字鍵 vs 資訊) - 給予適當比例並排 */
+    .upper-controls {
+        grid-template-columns: 1fr 1.2fr !important;
+        gap: 10px !important;
+    }
+    
+    /* 縮小一點按鈕內距與字體，避免擠出去 */
+    #number-palette .number, 
+    #number-palette .control-key, 
+    #number-palette .delete-key {
+        padding: 8px 0 !important;
+        font-size: 1.1em !important;
+    }
+
+    /* 下方輔助按鈕區 - 排成整齊的 2x3 網格 */
+    .lower-controls {
+        grid-template-columns: 1fr 1fr !important;
+        grid-template-rows: auto !important;
+        gap: 8px !important;
+    }
+
+    /* 隱藏沒用的快捷鍵說明 */
+    .keybindings-info {
+        display: none !important;
+    }
+}
+
+/* ==========================================================
+   📱 2. 手機橫向警告 - 如果玩家拿橫的，提醒他轉直！
+   ========================================================== */
+@media screen and (max-width: 900px) and (orientation: landscape) {
+    .main-container {
+        display: none !important; /* 把遊戲介面全部藏起來 */
+    }
+    
+    /* 用純 CSS 畫一個警告畫面 */
+    body::before {
+        content: "📱 螢幕高度不足 \A 請將手機旋轉至「直向 (Portrait)」⬇️";
+        white-space: pre-wrap; 
+        display: flex;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-color: var(--bg-color-light);
+        color: var(--theme-color-dark);
+        font-size: 1.5rem;
+        font-weight: bold;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        padding: 20px;
+        line-height: 1.8;
+        z-index: 9999;
+    }
 }
