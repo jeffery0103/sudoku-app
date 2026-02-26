@@ -2416,9 +2416,7 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
     z-index: 999999 !important; /* 確保大於房號輸入框的 1001 */
 }
 
-/* ==========================================================
-   📱 1. 手機直向完美排版 (當螢幕寬度小於 768px 時)
-   ========================================================== */
+
 /* ==========================================================
    📱 1. 手機直向完美排版 (當螢幕寬度小於 768px 時自動觸發)
    ========================================================== */
@@ -2494,6 +2492,38 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
     /* 隱藏佔空間的快捷鍵說明 (手機本來就沒有實體鍵盤) */
     .keybindings-info {
         display: none !important;
+    }
+
+    /* ======================================= */
+    /* ✨ 6. 修復被擠扁的彈窗按鈕 (難度與模式選擇) */
+    /* ======================================= */
+    
+    /* 將原本左右並排的按鈕容器，強行改為上下疊加 */
+    #difficulty-buttons,
+    #sudoku-mode-buttons {
+        flex-direction: column !important; 
+        gap: 12px !important; 
+    }
+
+    /* 讓每個按鈕都佔滿 100% 寬度，徹底釋放文字空間 */
+    .difficulty-btn,
+    .mode-select-btn {
+        width: 100% !important;
+        box-sizing: border-box !important;
+        padding: 15px 20px !important; 
+    }
+
+    /* 順便保護所有彈窗，避免內容太多時超出手機螢幕上下邊界 */
+    #difficulty-modal,
+    #sudoku-mode-modal,
+    #custom-modal,
+    #alert-modal,
+    #win-modal,
+    #multiplayer-join-modal {
+        width: 92% !important;
+        max-height: 90vh !important; 
+        overflow-y: auto !important; /* 內容太多可以滑動 */
+        padding: 20px 15px !important;
     }
 }
 
