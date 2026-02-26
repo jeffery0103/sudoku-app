@@ -39,6 +39,21 @@
     </div>
   </div>
 
+  <div id="multiplayer-join-modal-overlay" class="hidden">
+    <div id="multiplayer-join-modal">
+      <h3>多人連線</h3>
+      <div class="join-room-section">
+        <input type="text" id="room-id-input" placeholder="輸入房號" maxlength="6" />
+        <button id="join-room-btn">進入</button>
+      </div>
+      <hr>
+      <div class="create-room-section">
+        <button id="create-multiplayer-room-btn">創建新房間</button>
+      </div>
+      <button id="cancel-multiplayer-btn">返回</button>
+    </div>
+  </div>
+
   <div id="difficulty-modal-overlay" class="hidden">
     <div id="difficulty-modal">
       <h3>請選擇遊戲難度</h3>
@@ -46,15 +61,19 @@
       <div id="difficulty-buttons">
         <button class="difficulty-btn" data-difficulty="easy">
           <h4>簡單</h4>
-          <span>輔助全開，適合新手</span>
+          <span>輔助功能全開，適合新手(35洞)</span>
         </button>
         <button class="difficulty-btn" data-difficulty="medium">
           <h4>中等</h4>
-          <span>保留部分輔助，適合進階</span>
+          <span>保留部分輔助，適合進階(45洞)</span>
         </button>
         <button class="difficulty-btn" data-difficulty="hard">
           <h4>困難</h4>
-          <span>無進階輔助，純粹挑戰</span>
+          <span>無進階輔助，純粹挑戰自己(55洞)</span>
+        </button>
+        <button class="difficulty-btn" data-difficulty="custom">
+          <h4>自訂</h4>
+          <span>拖曳滑桿，自由決定空格數(30 ~ 59+)</span>
         </button>
       </div>
     </div>
@@ -79,38 +98,20 @@
   </div>
 
   <div id="win-modal-overlay" class="hidden">
-  <div id="win-modal">
-    <h2>恭喜通關！</h2>
-    <p>您已成功完成數獨挑戰！</p>
+    <div id="win-modal">
+      <h2 id="win-modal-title">恭喜通關！</h2>
+      <p id="win-modal-subtitle">您已成功完成數獨挑戰！</p>
 
-   <div id="win-stats-container">
-     <div class="win-stat-item">
-       <span class="stat-label">遊戲難度:</span>
-       <span id="win-stat-difficulty" class="stat-value"></span>
-     </div>
-     <div class="win-stat-item">
-    <span class="stat-label">謎題空格:</span>
-    <span id="win-stat-holes" class="stat-value"></span>
-     </div>
-     <div class="win-stat-item">
-       <span class="stat-label">通關耗時:</span>
-       <span id="win-stat-time" class="stat-value"></span>
-     </div>
-     <div class="win-stat-item">
-       <span class="stat-label">使用提示:</span>
-       <span id="win-stat-hints" class="stat-value"></span>
-     </div>
-     <div class="win-stat-item">
-       <span class="stat-label">使用檢查:</span>
-       <span id="win-stat-validations" class="stat-value"></span>
-     </div>
-   </div>
-   <button id="win-modal-new-game-btn">再來一局</button>
-   <button id="win-modal-extreme-challenge-btn" class="menu-button extreme-challenge hidden">
-      ✨ 挑戰極限模式 ✨
-    </button>
+      <div id="win-stats-container">
+        </div>
+      
+      <button id="win-modal-new-game-btn">再來一局</button>
+      <button id="win-modal-exit-room-btn" class="hidden">退出房間</button>
+      <button id="win-modal-extreme-challenge-btn" class="menu-button extreme-challenge hidden">
+        繼續觀戰 👀
+      </button>
+    </div>
   </div>
-</div>
 
   <div id="game-menu-modal-overlay" class="hidden">
     <div id="game-menu-modal">
@@ -118,7 +119,7 @@
       <div class="game-menu-buttons">
         <button id="menu-restart-btn">重新開始本局</button>
         <button id="menu-new-game-btn">開啟新的一局</button>
-        <button id="menu-back-to-lobby-btn">返回遊戲大廳</button>
+        
         <button id="menu-resume-btn">繼續遊戲</button>
       </div>
     </div>
@@ -204,7 +205,7 @@
                         <div class="in-game-chat-messages">
                           </div>
                         <div class="in-game-chat-input">
-                          <input type="text" placeholder="輸入訊息...">
+                          <input type="text" placeholder="輸入訊息..." maxlength="40" />
                           <button>傳送</button>
                         </div>
                       </div>
@@ -254,12 +255,27 @@
           <div id="solution-board"></div>
           <div class="solution-buttons">
             <button id="solution-new-game-btn">開啟新的一局</button>
-            <button id="solution-back-to-lobby-btn">返回大廳</button>
           </div>
         </div>
         
       </div> 
     </div> 
   </div> 
+  <div id="custom-difficulty-modal-overlay" class="hidden">
+    <div class="custom-modal-content">
+        <h2>自訂謎題難度</h2>
+        <div class="slider-section">
+            <label>
+                自訂空格數: <span id="holes-value-display">45</span> 洞
+                <span class="diff-text-wrapper">(<span id="holes-diff-text">中等</span>)</span>
+            </label>
+            <input type="range" id="custom-holes-slider" min="30" max="60" value="45">
+        </div>
+        <div class="custom-modal-actions">
+            <button id="cancel-custom-diff-btn">取消</button>
+            <button id="confirm-custom-diff-btn">確認</button>
+        </div>
+    </div>
+</div>
 </body>
 </html>

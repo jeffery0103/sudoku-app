@@ -6,6 +6,67 @@ const gracefulDisconnects = {};
 // --- 模組級輔助函式 ---
 // ======================================================
 
+// ✨ 統一生成包含詳細資訊的排行榜
+function generateFinalRanking(room) {
+    // ✨ 核心修正：從內部保險箱讀取解答，不要讀取被設為 null 的 gameState
+    const solution = room.secretSolution;
+    const initial = room.gameState.puzzle;
+    const difficulty = room.gameState.difficulty || 'medium';
+    let totalHoles = 0;
+
+    let initialHints = 0;
+    let initialValidates = 0;
+    switch (difficulty) {
+        case 'easy':    initialHints = 5; initialValidates = 5; break;
+        case 'medium':  initialHints = 3; initialValidates = 3; break;
+        case 'hard':    initialHints = 1; initialValidates = 1; break;
+        case 'extreme': initialHints = 0; initialValidates = 0; break;
+    }
+
+    if (initial) {
+        totalHoles = initial.flat().filter(n => n == 0).length;
+    }
+
+    return room.players.map(p => {
+        let correctCount = 0;
+        let filledCount = 0;
+
+        if (p.currentPuzzle && initial && solution) {
+            const flatInitial = initial.flat();
+            const flatCurrent = p.currentPuzzle.flat();
+            const flatSolution = solution.flat();
+
+            for (let i = 0; i < 81; i++) {
+                if (flatInitial[i] == 0 && flatCurrent[i] != 0) {
+                    filledCount++;
+                    if (flatCurrent[i] == flatSolution[i]) {
+                        correctCount++;
+                    }
+                }
+            }
+        }
+
+        const fillRate = totalHoles > 0 ? Math.floor((filledCount / totalHoles) * 100) : 0;
+        const accuracy = filledCount > 0 ? Math.floor((correctCount / filledCount) * 100) : 0;
+        const progress = p.status === 'finished' ? 100 : (totalHoles > 0 ? Math.floor((correctCount / totalHoles) * 100) : 0);
+
+        return {
+            playerName: p.name,
+            finishTime: p.finishTime !== null ? p.finishTime : 999999,
+            progress: progress,
+            accuracy: accuracy,
+            fillRate: fillRate,
+            status: p.status,
+            hintCount: initialHints - (p.hintCount || 0),
+            validateCount: initialValidates - (p.validateCount || 0)
+        };
+    }).sort((a, b) => {
+        if (a.progress === b.progress) return a.finishTime - b.finishTime;
+        return b.progress - a.progress;
+    });
+}
+
+
 function isBoardFull(board) {
   if (!board || board.length !== 9) return false;
   for (let r = 0; r < 9; r++) {
@@ -31,17 +92,22 @@ function calculateProgress(puzzle, initialPuzzle) {
     const totalToFill = totalCells - initialFilled;
     if (totalToFill <= 0) return 100;
     const playerFilled = currentFilled - initialFilled;
-    const percentage = Math.floor((playerFilled / totalToFill) * 100);
-    return Math.max(0, Math.min(100, percentage));
+    
+    // 【核心修正】後端的基礎進度也改為乘上 99
+    const percentage = Math.floor((playerFilled / totalToFill) * 99);
+    // 確保最多只回傳 99，100% 會由 broadcastFullPlayerState 裡的 isBoardCorrect 判斷給予
+    return Math.max(0, Math.min(99, percentage));
 }
 
 function broadcastFullPlayerState(io, room) {
     if (!room) return;
+    // ✨ 同步修正：使用 secretSolution 進行 100% 完成度判定
+    const solution = room.secretSolution; 
     const fullState = room.players.map(p => {
         let progress = 0;
         if (p.currentPuzzle && room.gameState.puzzle) {
             if (isBoardFull(p.currentPuzzle)) {
-                progress = isBoardCorrect(p.currentPuzzle, room.gameState.solution) ? 100 : 99;
+                progress = isBoardCorrect(p.currentPuzzle, solution) ? 100 : 99;
             } else {
                 progress = calculateProgress(p.currentPuzzle, room.gameState.puzzle);
             }
@@ -72,7 +138,7 @@ function setupSudokuGame(io, rooms, activeSudokuGames, room, puzzleResult) {
   const { puzzle, solution, holes, difficulty } = puzzleResult;
 
   room.status = 'playing'; 
-  io.emit("availableRoomsUpdate", getAvailableRoomsForDisplay(rooms)); 
+  room.secretSolution = solution; // ✨ 核心修正：將正確答案安全地存入房間內部實例中
 
   activeSudokuGames[room.id] = { 
     solution: solution, 
@@ -81,7 +147,7 @@ function setupSudokuGame(io, rooms, activeSudokuGames, room, puzzleResult) {
   
   room.gameState = { 
     puzzle: puzzle,
-    solution: null, 
+    solution: null, // 這裡保持 null，確保傳給前端時絕對安全
     holes: holes, 
     difficulty: difficulty, 
     seconds: 0 
@@ -103,7 +169,7 @@ function setupSudokuGame(io, rooms, activeSudokuGames, room, puzzleResult) {
     p.finishTime = null;
     p.hintCount = initialHints;
     p.validateCount = initialValidates;
-    p.pauseUses = room.isSinglePlayer ? 99 : 1; 
+    p.pauseUses = room.isSinglePlayer ? 99 : 2; 
   });
   
   console.log(`[伺服器] 房間 ${room.id} 遊戲設定完成，準備廣播開始信號。`);
@@ -165,12 +231,7 @@ module.exports = function(io, sudokuGame, rooms, pendingJoinRequests, activeSudo
     console.log(`${getTimestamp()} [通訊中心] 新使用者連線: ${socket.id}`);
     io.emit("onlineUsersUpdate", io.sockets.sockets.size);
 
-    socket.on('client-identity', (identity) => {
-        if (identity === 'electron-app') {
-            socket.isElectronClient = true; 
-            console.log(`[伺服器] Socket ${socket.id} 已識別為電腦版 APP 使用者。`);
-        }
-    });
+   
 
     socket.on('playerEnteredLobby', (playerName) => {
         const trimmedName = playerName ? String(playerName).trim() : '';
@@ -183,46 +244,7 @@ module.exports = function(io, sudokuGame, rooms, pendingJoinRequests, activeSudo
         console.log(`${getTimestamp()} [通訊中心] 玩家 "${trimmedName}" (${socket.id}) 進入了大廳`);
     });
 
-    socket.on('sudoku_client_ready_for_countdown', ({ roomId }) => {
-        const room = rooms[roomId];
-        if (!room || room.status !== 'playing') return;
-
-        console.log(`[遊戲流程] 房間 ${roomId} 的前端已準備好，開始倒數...`);
-        io.to(roomId).emit('sudoku_countdown_started');
-        broadcastFullPlayerState(io, room);
-
-        setTimeout(() => {
-            const currentRoom = rooms[roomId];
-            if (currentRoom && currentRoom.status === 'playing') {
-                const dataToSend = {
-                    puzzle: currentRoom.gameState.puzzle,
-                    difficulty: currentRoom.gameState.difficulty,
-                    holes: currentRoom.gameState.holes,
-                    blackoutNumbers: currentRoom.gameState.blackoutNumbers,
-                    specialMode: currentRoom.gameState.specialMode 
-                };
-                io.to(roomId).emit('sudoku_timerStart', dataToSend);
-                console.log(`[遊戲流程] 房間 ${roomId} 倒數結束，已發送棋盤資料。`);
-
-                if (currentRoom.gameState.specialMode === 'storm' && ENABLE_STORM) {
-                    startStormTimer(currentRoom, io);
-                }
-                
-                if (!currentRoom.isSinglePlayer) {
-                    console.log(`[計時器] 多人房間 ${roomId} 自動啟動計時器。`);
-                    currentRoom.timerInterval = setInterval(() => {
-                        const roomForInterval = rooms[roomId];
-                        if (roomForInterval && roomForInterval.status === 'playing' && !roomForInterval.isPaused) {
-                            roomForInterval.gameState.seconds++;
-                            io.to(roomId).emit('sudoku_timeUpdate', { seconds: roomForInterval.gameState.seconds });
-                        } else if (!roomForInterval) {
-                            clearInterval(currentRoom.timerInterval);
-                        }
-                    }, 1000);
-                }
-            }
-        }, 4000);
-    });
+   
 
     socket.on("createRoom", ({ playerName, gameType, isSinglePlayer }) => {
         console.log(`--- 🕵️‍ [伺服器] 收到 createRoom 請求 from ${playerName} ---`);
@@ -283,61 +305,57 @@ module.exports = function(io, sudokuGame, rooms, pendingJoinRequests, activeSudo
         }
     });
 
-    socket.on("requestJoinRoom", ({ roomId, playerName }) => {
-        console.log(`--- 🕵️‍ [伺服器] 收到 requestJoinRoom 請求 from ${playerName}，想加入 ${roomId} ---`);
-        const room = rooms[roomId];
-        if (!room || room.status !== "waiting") return socket.emit("joinRequestFeedback", { success: false, message: "無法加入房間（可能已開始或不存在）。" });
-        const host = room.players.find((p) => p.isHost);
-        if (!host || !io.sockets.sockets.has(host.id)) return socket.emit("joinRequestFeedback", { success: false, message: "房主已離線，無法加入。" });
+    // ✨ 直接讓玩家加入房間，免房主同意
+    socket.on("requestJoinRoom", (data) => {
+        const { roomId, playerName } = data;
+        console.log(`--- 🕵️‍ [伺服器] 收到直接加入請求 from ${playerName}，想加入 ${roomId} ---`);
         
-        socket.emit("joinRequestFeedback", { success: true, roomId });
-        const timeoutId = setTimeout(() => {
-            const request = pendingJoinRequests[socket.id];
-            if (request) {
-                socket.emit("joinRoomResult", { success: false, message: `加入請求因房主無回應而逾時。` });
-                io.to(request.hostSocketId).emit("playerJoinRequest", { requesterId: socket.id, status: "timedout" });
-                delete pendingJoinRequests[socket.id];
-            }
-        }, JOIN_REQUEST_TIMEOUT);
-        pendingJoinRequests[socket.id] = { roomId, hostSocketId: host.id, timeoutId, playerName };
-        console.log(`🕵️‍ [伺服器] 轉發 playerJoinRequest 給房主 ${host.id}`);
-        io.to(host.id).emit("playerJoinRequest", { requesterId: socket.id, playerName, timeout: JOIN_REQUEST_TIMEOUT });
-    });
-
-    socket.on("respondToJoinRequest", ({ requesterId, action }) => {
-        const request = pendingJoinRequests[requesterId];
-        if (!request || request.hostSocketId !== socket.id) return;
-        clearTimeout(request.timeoutId);
-
-        const { roomId, playerName } = request;
         const room = rooms[roomId];
-        const requesterSocket = io.sockets.sockets.get(requesterId);
 
-        delete pendingJoinRequests[requesterId];
-
-        if (action === "accept" && room && requesterSocket) {
-            room.players.push({ id: requesterId, name: playerName, isHost: false, isReady: false });
-            requesterSocket.join(roomId);
-            
-            requesterSocket.emit("joinRoomResult", {
-                success: true,
-                message: `成功加入房間 ${roomId}！`,
-                roomId,
-                gameType: room.gameType,
-                players: room.players.map(p => ({ id: p.id, name: p.name, isHost: p.isHost })),
-                isHost: false
-            });
-            
-            io.to(roomId).emit('updateRoomPlayers', {
-                players: room.players.map(p => ({ id: p.id, name: p.name, isHost: p.isHost })),
-                requesterId: requesterId
-            });
-            
-            io.emit("availableRoomsUpdate", getAvailableRoomsForDisplay());
-            io.to(roomId).emit("chatMessage", { type: 'system', message: `${playerName} 進入了房間。` });
-        } else if (requesterSocket) {
-            requesterSocket.emit("joinRoomResult", { success: false, message: "房主拒絕了您的請求。" });
+        // 1. 檢查房間是否存在
+        if (!room) {
+            return socket.emit('joinRoomResult', { success: false, message: '找不到此房間，請確認房號是否正確' });
         }
+        // 2. 檢查房間狀態
+        if (room.status !== "waiting") {
+            return socket.emit('joinRoomResult', { success: false, message: '此房間遊戲已經開始或不存在。' });
+        }
+        // 3. 檢查人數上限 (假設最多 4 人，可自行修改)
+        if (room.players.length >= 4) {
+            return socket.emit('joinRoomResult', { success: false, message: '此房間已滿' });
+        }
+
+        // 4. 建立新玩家資料並直接加入房間！
+        const newPlayer = { 
+            id: socket.id, 
+            name: playerName || "匿名玩家", 
+            isHost: false, 
+            isReady: false 
+        };
+        
+        room.players.push(newPlayer);
+        socket.join(roomId);
+
+        // 5. 通知加入者成功進入
+        socket.emit("joinRoomResult", {
+            success: true,
+            message: `成功加入房間 ${roomId}！`,
+            roomId,
+            gameType: room.gameType,
+            players: room.players.map(p => ({ id: p.id, name: p.name, isHost: p.isHost })),
+            isHost: false
+        });
+
+        // 6. 廣播給房間所有人更新玩家名單 (這會讓所有人的按鈕跟進度條同步)
+        io.to(roomId).emit('updateRoomPlayers', {
+            players: room.players.map(p => ({ id: p.id, name: p.name, isHost: p.isHost }))
+        });
+
+        // 7. 更新大廳清單與聊天室公告
+        io.emit("availableRoomsUpdate", getAvailableRoomsForDisplay());
+        io.to(roomId).emit("chatMessage", { type: 'system', message: `${newPlayer.name} 進入了房間。` });
+        
+        console.log(`[連線] 玩家 ${newPlayer.name} 直接加入了房間 ${roomId}`);
     });
 
     socket.on("cancelRoom", (roomId) => {
@@ -359,6 +377,31 @@ module.exports = function(io, sudokuGame, rooms, pendingJoinRequests, activeSudo
             io.emit("availableRoomsUpdate", getAvailableRoomsForDisplay());
         }
     });
+
+    // 房主發起再來一局
+    socket.on('sudoku_request_rematch', ({ roomId }) => {
+        const room = rooms[roomId];
+        if (room && room.players[0].id === socket.id) {
+            room.status = 'waiting';
+            room.players.forEach(p => {
+                p.status = 'waiting';
+                p.currentPuzzle = null;
+                p.isReady = false;
+            });
+            // 通知其他人房主邀請重玩
+            socket.to(roomId).emit('sudoku_rematch_requested');
+            io.to(roomId).emit('updateRoomPlayers', { players: room.players.map(p => ({id: p.id, name: p.name, isHost: p.isHost})) });
+        }
+    });
+
+    // 玩家接受再來一局
+    socket.on('sudoku_accept_rematch', ({ roomId }) => {
+        const room = rooms[roomId];
+        if (room) {
+            io.to(roomId).emit('updateRoomPlayers', { players: room.players.map(p => ({id: p.id, name: p.name, isHost: p.isHost})) });
+        }
+    });
+
 
     socket.on("requestAvailableRooms", () => socket.emit("availableRoomsUpdate", getAvailableRoomsForDisplay()));
     
@@ -432,29 +475,56 @@ module.exports = function(io, sudokuGame, rooms, pendingJoinRequests, activeSudo
       }, 300000); 
     }
 
-    socket.on('sudoku_startGame', async ({ roomId, difficulty }) => {
+    // ✨ 統籌生成、倒數與開始的全新流程 (具備防重複觸發鎖)
+    socket.on('sudoku_startGame', async ({ roomId, difficulty, holes }) => { 
       try {
         const room = rooms[roomId];
         const player = room?.players.find(p => p.id === socket.id);
 
-        if (!room || !player?.isHost || room.status === 'playing') {
-          console.log('[伺服器] startGame 請求無效或已被拒絕。');
-          return;
+        // 🛑 核心修復：加入 'generating' 狀態判斷，擋下所有重複發送的請求！
+        if (!room || !player?.isHost || room.status === 'playing' || room.status === 'generating') {
+            return;
         }
 
-        const needsHeavyComputing = (difficulty === 'hard' || difficulty === 'extreme');
+        // 🔒 立刻把房間上鎖，標示為正在生成中
+        room.status = 'generating';
 
-        if (socket.isElectronClient && needsHeavyComputing) {
-          console.log(`[伺服器] 任務困難，指派給菁英兵 ${player.name} 進行本地端運算...`);
-          io.to(socket.id).emit('server-requests-puzzle-generation', { difficulty });
-        } else {
-          console.log(`[伺服器] 由伺服器產生謎題 (難度: ${difficulty})...`);
-          const result = await generatePuzzleParallel(difficulty);
-          result.difficulty = difficulty;
-          setupSudokuGame(io, rooms, activeSudokuGames, room, result);
-        }
+        console.log(`[伺服器] 開始為房間 ${roomId} 產生謎題 (難度: ${difficulty}, 洞數: ${holes || '預設'})...`);
+        
+        // 1. 廣播給所有人，切換成生成中畫面
+        io.to(roomId).emit('sudoku_generation_started', { difficulty, holes });
+        
+        // 2. 開始運算
+        const result = await generatePuzzleParallel(
+            difficulty, 
+            holes,
+            (progressData) => {
+                io.to(roomId).emit('sudoku_generation_progress', progressData);
+            }
+        );
+        
+        result.difficulty = difficulty;
+
+        // 3. 運算完成，通知前端切換成 3, 2, 1 倒數畫面
+        io.to(roomId).emit('sudoku_countdown_started');
+        broadcastFullPlayerState(io, room);
+
+        // 4. 延遲 3.5 秒等待前端倒數動畫播完，再正式發送棋盤並開始計時
+        setTimeout(() => {
+            const currentRoom = rooms[roomId];
+            if (currentRoom) {
+                // setupSudokuGame 內部會自動將狀態轉為 'playing'
+                setupSudokuGame(io, rooms, activeSudokuGames, currentRoom, result);
+                if (currentRoom.gameState.specialMode === 'storm' && ENABLE_STORM) {
+                    startStormTimer(currentRoom, io);
+                }
+            }
+        }, 3500);
+
       } catch (err) {
         console.error(`[錯誤] 'sudoku_startGame' 處理過程中發生錯誤:`, err);
+        // 🔓 如果出錯，把房間解鎖回等待狀態，允許玩家重新按按鈕試一次
+        if (rooms[roomId]) rooms[roomId].status = 'waiting';
         io.to(socket.id).emit('game_creation_error', { message: '開始遊戲失敗，請重試。' });
       }
     });
@@ -570,13 +640,11 @@ module.exports = function(io, sudokuGame, rooms, pendingJoinRequests, activeSudo
         const allPlayersDone = room.players.every(p => ['finished', 'surrendered', 'disconnected'].includes(p.status));
         if (allPlayersDone && !room.isSinglePlayer) { 
             if (room.timerInterval) clearInterval(room.timerInterval);
-            if (room.stormInterval) clearInterval(room.stormInterval);
-            
             room.status = 'gameOver';
-            const finalRanking = room.players
-                .filter(p => p.status === 'finished')
-                .sort((a, b) => a.finishTime - b.finishTime)
-                .map(p => ({ playerName: p.name, finishTime: p.finishTime }));
+            
+            // ✨ 結算排行：直接呼叫我們剛剛寫好的統一排行函式！
+            const finalRanking = generateFinalRanking(room);
+            
             io.to(roomId).emit('sudoku_gameOver', { finalRanking });
         }
     });
@@ -609,6 +677,9 @@ module.exports = function(io, sudokuGame, rooms, pendingJoinRequests, activeSudo
         const player = room.players.find(p => p.id === socket.id);
         if (player && player.status === 'playing') {
             player.status = 'surrendered';
+            // ✨ 核心修正：直接讀取遊戲已經進行的秒數！
+            player.finishTime = room.gameState ? room.gameState.seconds : 0; 
+            
             io.to(roomId).emit("chatMessage", { type: 'system', message: `🏳️ ${player.name} 已投降。` });
             broadcastFullPlayerState(io, room);
             
@@ -618,10 +689,7 @@ module.exports = function(io, sudokuGame, rooms, pendingJoinRequests, activeSudo
                 if (room.stormInterval) clearInterval(room.stormInterval);
             
                 room.status = 'gameOver';
-                const finalRanking = room.players
-                    .filter(p => p.status === 'finished')
-                    .sort((a, b) => a.finishTime - b.finishTime)
-                    .map(p => ({ playerName: p.name, finishTime: p.finishTime }));
+                const finalRanking = generateFinalRanking(room);
                 io.to(roomId).emit('sudoku_gameOver', { finalRanking });
             }
         }
@@ -640,7 +708,7 @@ module.exports = function(io, sudokuGame, rooms, pendingJoinRequests, activeSudo
             io.to(roomId).emit('sudoku_gamePaused', { requesterId: socket.id, playerName: player.name });
         } else {
             if (player.pauseUses > 0) {
-                player.pauseUses = 0; 
+                player.pauseUses--; 
                 room.isPaused = true;
                 room.pausedBy = socket.id;
                 io.to(roomId).emit('sudoku_gamePaused', { requesterId: socket.id, playerName: player.name });
@@ -654,7 +722,43 @@ module.exports = function(io, sudokuGame, rooms, pendingJoinRequests, activeSudo
         if (room.pausedBy === socket.id) {
             room.isPaused = false;
             room.pausedBy = null;
-            io.to(roomId).emit('sudoku_gameResumed');
+            // ✨ 加上 resumerId，廣播給所有人「是誰解除暫停的」
+            io.to(roomId).emit('sudoku_gameResumed', { resumerId: socket.id });
+        }
+    });
+
+    // ✨ 處理玩家主動退出房間的邏輯
+    socket.on("leaveRoom", ({ roomId }) => {
+        const room = rooms[roomId];
+        if (room) {
+            const playerIndex = room.players.findIndex(p => p.id === socket.id);
+            if (playerIndex > -1) {
+                const playerName = room.players[playerIndex].name;
+                // 1. 從房間名單中移除
+                room.players.splice(playerIndex, 1);
+                // 2. 離開 Socket 通訊群組
+                socket.leave(roomId);
+                
+                // 3. 通知剩下的玩家
+                io.to(roomId).emit("chatMessage", { type: 'system', message: `${playerName} 已退出房間。` });
+                
+                if (room.players.length === 0) {
+                    // 如果沒人了，刪除房間
+                    delete rooms[roomId];
+                } else if (!room.players.some(p => p.isHost)) {
+                    // 如果走的是房主，移交權限
+                    room.players[0].isHost = true;
+                    io.to(roomId).emit("chatMessage", { type: 'system', message: `${room.players[0].name} 已被提升為新房主。` });
+                }
+                
+                // 4. 更新剩餘玩家的畫面
+                if (rooms[roomId]) {
+                    io.to(roomId).emit('updateRoomPlayers', { 
+                        players: room.players.map(p => ({id: p.id, name: p.name, isHost: p.isHost})) 
+                    });
+                }
+                io.emit("availableRoomsUpdate", getAvailableRoomsForDisplay());
+            }
         }
     });
     
@@ -682,7 +786,7 @@ module.exports = function(io, sudokuGame, rooms, pendingJoinRequests, activeSudo
                         if (gracefulDisconnects[disconnectedPlayer.id]) {
                             console.log(`[斷線保護] 玩家 ${disconnectedPlayer.name} 重連逾時，正式判定為離線。`);
                             disconnectedPlayer.status = 'disconnected';
-                            
+                            disconnectedPlayer.finishTime = room.gameState ? room.gameState.seconds : 0;
                             io.to(roomId).emit("chatMessage", { type: 'system', message: `🔌 玩家 ${disconnectedPlayer.name} 已離線。` });
                             
                             if (room.gameType.toUpperCase() === 'SUDOKU') {
@@ -694,10 +798,7 @@ module.exports = function(io, sudokuGame, rooms, pendingJoinRequests, activeSudo
                                     if (room.stormInterval) clearInterval(room.stormInterval);
                                     if (room.timerInterval) clearInterval(room.timerInterval);
                                     room.status = 'gameOver';
-                                    const finalRanking = room.players
-                                        .filter(p => p.status === 'finished')
-                                        .sort((a, b) => a.finishTime - b.finishTime)
-                                        .map(p => ({ playerName: p.name, finishTime: p.finishTime }));
+                                    const finalRanking = generateFinalRanking(room);
                                     io.to(roomId).emit('sudoku_gameOver', { finalRanking });
                                 }
                             } 

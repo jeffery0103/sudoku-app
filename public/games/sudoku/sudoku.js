@@ -4,8 +4,8 @@
 function initializeGame(
   socket, // 我們直接使用這個傳進來的 socket，不再需要全域變數
   initialState,
-  showCustomAlertFromLobby,
-  showCustomConfirmFromLobby
+  showCustomAlert,
+  showCustomConfirm
 ) {
   console.log("initializeGame function started.");
 
@@ -42,7 +42,6 @@ function initializeGame(
     menuResumeBtn,
     menuRestartBtn,
     menuNewGameBtn,
-    menuBackToLobbyBtn,
     sudokuJoinRequestsArea,
     sudokuJoinRequestsList,
     inGameControls,
@@ -60,7 +59,7 @@ function initializeGame(
     playerNameDisplay,
     infoPanelTitle;
     
-    
+    let multiplayerJoinModalOverlay, roomIdInput, joinRoomBtn, createMultiplayerRoomBtn, cancelMultiplayerBtn;
 
   let selectedCell = null,
     puzzle = [],
@@ -97,7 +96,16 @@ function initializeGame(
   let historyIndex = -1;
   let iAmHost = initialState.isHost || false;
   const myPlayerName = initialState.playerName;
-  const myPlayerId = initialState.playerId;
+  
+  // ✨【核心修正 1】改為 let，並優先讀取 socket.id，保證身分與伺服器完全吻合
+  let myPlayerId = socket.id || initialState.playerId; 
+  
+  // 確保連線成功後，身分證字號絕對精準
+  socket.on('connect', () => {
+      myPlayerId = socket.id; 
+      if (!currentViewedPlayerId) currentViewedPlayerId = myPlayerId;
+  });
+
   let loadingAnimationTimeout = null;
   let gameSettings = {
     difficulty: "medium",
@@ -105,6 +113,7 @@ function initializeGame(
     allowNumberHighlight: true,
     allowNumberCounter: true,
   };
+  
   let pencilMarksData = Array(9)
     .fill()
     .map(() =>
@@ -175,9 +184,7 @@ function isBoardFull() {
     if (menuNewGameBtn) {
       menuNewGameBtn.style.display = (isMultiplayerPlaying || isMultiplayerGameOver) ? 'none' : 'block';
     }
-    if (menuBackToLobbyBtn) {
-      menuBackToLobbyBtn.style.display = (isMultiplayerPlaying || isMultiplayerGameOver) ? 'none' : 'block';
-    }
+    
   }
 
   function initializeTabs() {
@@ -280,8 +287,14 @@ function isBoardFull() {
     const playerListContainer = document.querySelector("#multiplayer-waiting-panel .player-list-container");
     if (!playerListContainer || !players || !myPlayerId) return;
 
+    const wasHost = iAmHost; // ✨ 紀錄原本的身分
     const meInNewList = players.find((p) => p.id === myPlayerId);
     iAmHost = meInNewList ? meInNewList.isHost : false;
+
+    // ✨ 如果從「挑戰者」晉升為「房主」，重新繪製畫面以產生「開始遊戲」按鈕！
+    if (!wasHost && iAmHost && currentGameId) {
+        showWaitingScreen(currentGameId);
+    }
 
     const startGameBtn = document.getElementById("sudoku-start-game-btn");
     if (startGameBtn) {
@@ -291,6 +304,24 @@ function isBoardFull() {
       } else {
         startGameBtn.classList.add("hidden");
       }
+    }
+
+    // ✨ 同步更新棋盤內建開始按鈕 (防呆 + 大地色恢復)
+    const boardStartBtn = document.getElementById("board-start-game-btn");
+    if (boardStartBtn) {
+        if (players.length < 2) {
+            boardStartBtn.disabled = true;
+            boardStartBtn.style.backgroundColor = "#95a5a6"; // 灰色
+            boardStartBtn.style.borderColor = "#7f8c8d";
+            boardStartBtn.style.cursor = "not-allowed";
+            boardStartBtn.textContent = "等待對手加入...";
+        } else {
+            boardStartBtn.disabled = false;
+            boardStartBtn.style.backgroundColor = "#aa8b19"; // 恢復大地色
+            boardStartBtn.style.borderColor = "#aa8b19";
+            boardStartBtn.style.cursor = "pointer";
+            boardStartBtn.textContent = "開始遊戲";
+        }
     }
 
     playerListContainer.innerHTML = "";
@@ -341,6 +372,7 @@ function isBoardFull() {
   }
 
   function resetUIForNewGame() {
+    if (winModalOverlay) winModalOverlay.classList.add("hidden");
     console.log('[流程] 正在重置 UI 以準備新遊戲...');
     hideWaitingScreen();
     resetTimer();
@@ -376,16 +408,73 @@ function isBoardFull() {
     updatePauseButtonState();
   }
 
-  function showWaitingScreen(roomId) {
+  function showWaitingScreen(roomIdOrText) {
     setUIState("waiting_multiplayer");
-    const mainText = document.getElementById("waiting-main-text");
+    
+    // 確保整個遊戲容器是顯示的
+    if (appContainer) appContainer.classList.remove("hidden");
 
-    if (mainText) {
-      mainText.innerHTML = `已進入房間 <strong>${roomId}</strong>`;
+    if (boardElement) {
+      boardElement.classList.remove("hidden");
+      
+      // ✨【修復 1：加上 aspect-ratio: 1 / 1 確保棋盤維持完美的正方形】
+      let waitingHtml = `
+        <div class="board-waiting-screen" style="width: 100%; aspect-ratio: 1 / 1; min-height: 350px; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; background-color: #faf8f5;">
+          <h2 style="color: #2c3e50; margin-bottom: 20px; font-weight: bold;">等待其他玩家加入</h2>
+      `;
+
+      // 房號字體稍微加大並增加陰影
+      if (roomIdOrText && roomIdOrText.length <= 6 && !roomIdOrText.includes("正在") && !roomIdOrText.includes("等待")) {
+          waitingHtml += `<h1 style="font-size: 4em; letter-spacing: 8px; color: #e74c3c; margin: 0; font-weight: 900; text-shadow: 2px 2px 4px rgba(0,0,0,0.15);">${roomIdOrText}</h1>`;
+      } else {
+          waitingHtml += `<p style="font-size: 1.3em; color: #555;">${roomIdOrText || "請稍候..."}</p>`;
+      }
+
+      // ✨【修復 2：大地色按鈕，初始顏色深一點 #aa8b19】
+      if (iAmHost) {
+          // ✨【修正】預設直接設為 disabled (禁用)、灰色 (#95a5a6)、文字為等待加入
+          waitingHtml += `
+              <button id="board-start-game-btn" disabled style="position: absolute; bottom: 30px; padding: 15px 50px; font-size: 1.3em; font-weight: bold; background-color: #95a5a6; color: white; border: 2px solid #7f8c8d; border-radius: 10px; cursor: not-allowed; box-shadow: 0 4px 8px rgba(0,0,0,0.2); transition: all 0.2s;">
+                  等待對手加入...
+              </button>
+          `;
+      } else {
+          waitingHtml += `
+              <p style="position: absolute; bottom: 30px; font-size: 1.2em; color: #7f8c8d; font-weight: bold; margin: 0;">
+                  等待房主開始遊戲...
+              </p>
+          `;
+      }
+
+      waitingHtml += `</div>`;
+      
+      boardElement.innerHTML = waitingHtml;
+
+      const boardStartBtn = document.getElementById("board-start-game-btn");
+      if (boardStartBtn) {
+        // ✨【修復 3：加入滑鼠懸停效果，移上去變亮 #c4ac57，移開變回 #aa8b19】
+        boardStartBtn.addEventListener("mouseover", () => {
+             if(!boardStartBtn.disabled) boardStartBtn.style.backgroundColor = "#c4ac57";
+        });
+        boardStartBtn.addEventListener("mouseout", () => {
+             if(!boardStartBtn.disabled) boardStartBtn.style.backgroundColor = "#aa8b19";
+        });
+        boardStartBtn.addEventListener("mousedown", () => boardStartBtn.style.transform = "scale(0.95)");
+        boardStartBtn.addEventListener("mouseup", () => boardStartBtn.style.transform = "scale(1)");
+        
+        boardStartBtn.addEventListener("click", async () => {
+          const userConfirmed = await showCustomConfirm("開始遊戲？開始後無法再加入新玩家", "確認開始");
+          if (userConfirmed) {
+            // ✨ 補上這行，確保按下確認後背景會乾淨地隱藏
+            if (appContainer) appContainer.classList.add("hidden"); 
+            if (difficultyModalOverlay) difficultyModalOverlay.classList.remove("hidden");
+          }
+        });
+      }
     }
 
-    if (waitingView) waitingView.classList.remove("hidden");
-    if (boardElement) boardElement.classList.add("hidden");
+    const waitingView = document.getElementById("waiting-view");
+    if (waitingView) waitingView.classList.add("hidden");
   }
 
   function hideWaitingScreen() {
@@ -513,6 +602,24 @@ function isBoardFull() {
   }
 
   function updateTimerDisplay(serverSeconds) {
+    const timerContainer = document.getElementById("timer-container");
+
+    // 【核心修正】多人模式：暴力替換整個計時器區域的 HTML
+    if (gameMode === 'multiplayer') {
+        if (currentlySpectatingId) return; // ✨ 觀戰時強制不更新右上角，保護「正在觀看」文字
+        if (timerContainer) {
+            timerContainer.innerHTML = `<span class="timer-label">房號：</span><span id="timer-value" style="font-weight:bold; color:var(--theme-color-dark);">${currentGameId || "未知"}</span>`;
+        }
+        return; 
+    }
+
+    // 單人模式：確保計時器結構正常
+    let timerValueEl = document.getElementById("timer-value");
+    if (!timerValueEl && timerContainer) {
+        timerContainer.innerHTML = `<span class="timer-label">已用時間：</span><span id="timer-value">00:00:00</span>`;
+        timerValueEl = document.getElementById("timer-value");
+    }
+    
     const currentSeconds = typeof serverSeconds !== 'undefined' ? serverSeconds : seconds;
     const totalSeconds = Number.isFinite(currentSeconds) ? currentSeconds : 0;
 
@@ -522,8 +629,8 @@ function isBoardFull() {
 
     const formattedTime = `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
     
-    if (timerValueElement) {
-      timerValueElement.textContent = formattedTime;
+    if (timerValueEl) {
+      timerValueEl.textContent = formattedTime;
     }
   }
 
@@ -538,15 +645,18 @@ function isBoardFull() {
       .filter((cell) => cell.value !== 0).length;
     const totalToFill = totalCells - initialFilled;
     const playerFilled = currentFilled - initialFilled;
-    if (totalToFill <= 0) {
-      if (progressBarFill) progressBarFill.style.width = `100%`;
-      if (progressPercentage) progressPercentage.textContent = `100%`;
-      return;
+    
+    if (totalToFill <= 0) return;
+
+    // 【核心修正】基礎進度算法：將滿分設為 99%
+    let percentage = Math.floor((playerFilled / totalToFill) * 99);
+    percentage = Math.max(0, Math.min(99, percentage)); // 確保不會超過99%
+
+    // 只有當玩家真正完成且「完全正確」時，才給予最後的 1% 達到 100%
+    if (iHaveFinished) {
+      percentage = 100;
     }
-    const percentage = Math.max(
-      0,
-      Math.min(100, Math.floor((playerFilled / totalToFill) * 100))
-    );
+
     if (progressBarFill) progressBarFill.style.width = `${percentage}%`;
     if (progressPercentage) progressPercentage.textContent = `${percentage}%`;
   }
@@ -664,6 +774,11 @@ function isBoardFull() {
   function updatePauseButtonState() {
     if (!pauseBtn) return;
 
+    if (iHaveSurrendered) {
+        pauseBtn.disabled = true;
+        return;
+    }
+
     if (gameMode === 'single') {
         pauseBtn.disabled = !isTimerRunning;
     } else if (gameMode === 'multiplayer') {
@@ -692,13 +807,13 @@ function isBoardFull() {
   }
 
   function updateGameInfo() {
-    if (infoHintCount) infoHintCount.textContent = hintCount > 0 ? hintCount : "用完";
-    if (infoValidateCount) infoValidateCount.textContent = validateCount > 0 ? validateCount : "用完";
+    if (infoHintCount) infoHintCount.textContent = hintCount;
+    if (infoValidateCount) infoValidateCount.textContent = validateCount;
 
     const multiHintCount = document.getElementById('info-hint-count-display');
     const multiValidateCount = document.getElementById('info-validate-count-display');
-    if (multiHintCount) multiHintCount.textContent = hintCount > 0 ? hintCount : "用完";
-    if (multiValidateCount) multiValidateCount.textContent = validateCount > 0 ? validateCount : "用完";
+    if (multiHintCount) multiHintCount.textContent = hintCount;
+    if (multiValidateCount) multiValidateCount.textContent = validateCount;
   }
 
   function disableGameControls(disabled, exceptions = []) {
@@ -784,6 +899,7 @@ function isBoardFull() {
     isFirstPencilMarkMade = false;
     selectedCell = null;
     lastSelectedCoords = null;
+    myCurrentStatus = 'playing'; // ✨ 補上這行：確保再來一局時，狀態恢復為遊戲中
     if (pauseBtn) pauseBtn.textContent = "暫停";
     
     if (puzzleData && puzzleData[0] && typeof puzzleData[0][0] === 'object' && puzzleData[0][0] !== null) {
@@ -900,8 +1016,31 @@ function isBoardFull() {
           showCustomAlert("已進入【望遠鏡模式】！<br>筆記將只在您選中的格子上顯示。");
     }
 
-    const keybindingsInfoHTML = `...`; // (你的快捷鍵說明HTML)
-    const gameInfoHTML = `...`; // (你的遊戲資訊HTML)
+    const keybindingsInfoHTML = `
+      <div class="keybindings-info" style="margin-top: 20px; padding-top: 15px; border-top: 2px solid #d8d8d8; text-align: left;">
+        <h4 style="margin: 0 0 10px 0; color: var(--theme-color-dark);">⌨️ 快捷鍵說明</h4>
+        <div style="display: grid; grid-template-columns: max-content 1fr; gap: 6px 15px; font-size: 0.95em; color: #555; line-height: 1.5;">
+          <span>填寫 / 筆記：</span><span>1~9</span>
+          <span>清除格子：</span><span>&lt;-- / Del</span>
+          <span>切換筆記模式：</span><span>P / 中鍵</span>
+          <span>切換高亮輔助：</span><span>L</span>
+          <span>移動選取框：</span><span>方向鍵</span>
+        </div>
+      </div>
+    `;
+
+    const gameInfoHTML = `
+      <div class="info-item"><span>剩餘提示:</span><span id="info-hint-count-display">${hintCount}</span></div>
+      <div class="info-item"><span>剩餘檢查:</span><span id="info-validate-count-display">${validateCount}</span></div>
+      <div class="info-item"><span>剩餘暫停:</span><span id="info-pause-count-display">2</span></div>
+      
+      <hr style="margin: 10px 0; border: none; height: 2px; background-color: #d8d8d8;">
+      
+      <div class="info-item-column"><h4>當前難度</h4><p>${difficultyText} (${holes} 空格)</p></div>
+      <div class="info-item-column"><h4>輔助功能</h4><p>${helpersText}</p></div>
+      
+      ${keybindingsInfoHTML}
+    `;
 
     if (singlePlayerInfoPanel) {
       if (difficultyDisplay) difficultyDisplay.textContent = `${difficultyText} (${holes} 空格)`;
@@ -940,6 +1079,10 @@ function isBoardFull() {
         const data = await response.json();
 
         if (data.isCorrect) {
+          // 【核心修正】標記為完成，並重新呼叫更新進度，讓進度條補滿最後的 100%
+          iHaveFinished = true;
+          updateProgress();
+          
           socket.emit('sudoku_playerAction', {
               roomId: currentGameId,
               puzzle: puzzle.map(row => row.map(cell => cell.value)),
@@ -948,7 +1091,7 @@ function isBoardFull() {
           showWinModal();
         } else {
           showCustomAlert("您已填滿所有格子，但答案包含錯誤。");
-          validateBoard(true);
+          validateBoard(true); // 自動幫玩家標示錯誤
         }
       } catch (error) {
         console.error("判斷勝利時發生錯誤:", error);
@@ -975,39 +1118,73 @@ function isBoardFull() {
 
   function showWinModal() {
     stopTimer();
-    disableGameControls(true);
+    disableGameControls(true, ['game-menu-btn']);
     
-    const difficultyEl = document.getElementById('win-stat-difficulty');
-    const holesEl = document.getElementById('win-stat-holes');
-    const timeEl = document.getElementById('win-stat-time');
-    const hintsEl = document.getElementById('win-stat-hints');
-    const validationsEl = document.getElementById('win-stat-validations');
+    const winTitle = document.getElementById('win-modal-title');
+    const winSubtitle = document.getElementById('win-modal-subtitle');
+    if (winTitle) winTitle.textContent = "恭喜通關！";
+    if (winSubtitle) winSubtitle.classList.remove("hidden");
 
-    const difficultyMap = { 'easy': '簡單', 'medium': '中等', 'hard': '困難', 'extreme': '極限' };
+    const difficultyMap = { 'easy': '簡單', 'medium': '中等', 'hard': '困難' }; 
     const difficultyText = difficultyMap[gameSettings.difficulty] || '未知';
     const finalTime = timerValueElement ? timerValueElement.textContent : '未知';
-    
-    const initialHintCount = { 'easy': 5, 'medium': 3, 'hard': 1, 'extreme': 0 }[gameSettings.difficulty] || 0;
-    const initialValidateCount = { 'easy': 5, 'medium': 3, 'hard': 1, 'extreme': 0 }[gameSettings.difficulty] || 0;
+    const initialHintCount = { 'easy': 5, 'medium': 3, 'hard': 1 }[gameSettings.difficulty] || 0;
+    const initialValidateCount = { 'easy': 5, 'medium': 3, 'hard': 1 }[gameSettings.difficulty] || 0;
     const hintsUsed = initialHintCount - hintCount;
     const validationsUsed = initialValidateCount - validateCount;
 
-    if (difficultyEl) difficultyEl.textContent = difficultyText;
-    if (holesEl) holesEl.textContent = `${puzzleHoles} 個`;
-    if (timeEl) timeEl.textContent = finalTime;
-    if (hintsEl) hintsEl.textContent = `${hintsUsed} 次`;
-    if (validationsEl) validationsEl.textContent = `${validationsUsed} 次`;
+    // 重建個人數據 HTML
+    const winStatContainer = document.getElementById('win-stats-container');
+    if (winStatContainer) {
+        winStatContainer.innerHTML = `
+            <div class="win-stat-item"><span class="stat-label">遊戲難度:</span><span class="stat-value">${difficultyText}</span></div>
+            <div class="win-stat-item"><span class="stat-label">謎題空格:</span><span class="stat-value">${puzzleHoles} 個</span></div>
+            <div class="win-stat-item"><span class="stat-label">通關耗時:</span><span class="stat-value">${finalTime}</span></div>
+            <div class="win-stat-item"><span class="stat-label">使用提示:</span><span class="stat-value">${hintsUsed} 次</span></div>
+            <div class="win-stat-item"><span class="stat-label">使用檢查:</span><span class="stat-value">${validationsUsed} 次</span></div>
+        `;
+    }
+
+    const winModalExtremeBtn = document.getElementById('win-modal-extreme-challenge-btn');
+    const exitRoomBtn = document.getElementById('win-modal-exit-room-btn');
+
+    if (gameMode === 'multiplayer') {
+        // ✨ 多人模式：隱藏再來一局，顯示觀戰與退出房間
+        if (winModalNewGameBtn) winModalNewGameBtn.classList.add("hidden");
+        if (exitRoomBtn) {
+            exitRoomBtn.classList.remove("hidden");
+            exitRoomBtn.onclick = () => {
+                socket.emit("leaveRoom", { roomId: currentGameId });
+                resetToModeSelection();
+            };
+        }
+        if (winModalExtremeBtn) {
+            winModalExtremeBtn.textContent = "繼續觀戰 👀";
+            winModalExtremeBtn.classList.remove("hidden");
+            winModalExtremeBtn.onclick = () => {
+                winModalOverlay.classList.add("hidden");
+                showCustomAlert("點擊右下角玩家進度條即可觀看他們的最終盤面！");
+            };
+        }
+    } else {
+        // 單人模式：顯示再來一局，隱藏觀戰與退出房間
+        if (winModalNewGameBtn) {
+            winModalNewGameBtn.classList.remove("hidden");
+            winModalNewGameBtn.textContent = "再來一局";
+            winModalNewGameBtn.onclick = () => {
+                socket.emit('sudoku_leave_single_player_game');
+                resetUIForNewGame();
+                winModalOverlay.classList.add("hidden");
+                appContainer.classList.add("hidden");
+                difficultyModalOverlay.classList.remove("hidden");
+            };
+        }
+        if (exitRoomBtn) exitRoomBtn.classList.add("hidden");
+        if (winModalExtremeBtn) winModalExtremeBtn.classList.add("hidden");
+    }
 
     if (winModalOverlay) winModalOverlay.classList.remove("hidden");
-    
-    if (typeof confetti === "function") {
-      confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } });
-    }
-    const extremeChallengeBtn = document.getElementById('win-modal-extreme-challenge-btn');
-
-    if (extremeChallengeBtn && (gameSettings.difficulty === 'hard' || gameSettings.difficulty === 'easy')) {
-        extremeChallengeBtn.classList.remove('hidden');
-    }
+    if (typeof confetti === "function") confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } });
   }
 
   function highlightAndCheckConflicts() {
@@ -1488,13 +1665,12 @@ function isBoardFull() {
     if (!chatNotificationBadge) return;
 
     if (unreadChatMessages > 0) {
-      chatNotificationbadge.textContent = unreadChatMessages;
+      chatNotificationBadge.textContent = unreadChatMessages; 
       chatNotificationBadge.classList.remove("hidden");
     } else {
       chatNotificationBadge.classList.add("hidden");
     }
   }
-
   function setupLotteryStage(finalResult) {
     return new Promise(resolve => {
       const lotteryOverlay = document.getElementById('lottery-modal-overlay');
@@ -1811,54 +1987,121 @@ function isBoardFull() {
 function setupEventListeners() {
     console.log("[前端] 正在設定所有事件監聽器...");
 
-    // ======================================================
-    // --- 1. 全新增加的「混合模式」核心監聽器 ---
-    // ======================================================
-
-    // 1.1 身分宣告 (確保 socket 已連線)
-    const identifyAsElectron = () => {
-      if (typeof window.electronAPI !== 'undefined') {
-        console.log("[前端] 偵測到 Electron 環境，進行身分宣告。");
-        socket.emit('client-identity', 'electron-app');
-      }
-    };
-    if (socket.connected) {
-      identifyAsElectron();
-    } else {
-      socket.once('connect', identifyAsElectron);
+    // ✨ 新增：限制房號輸入框只能輸入大寫英文與數字
+    if (roomIdInput) {
+        roomIdInput.addEventListener("input", function() {
+            this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        });
     }
 
-    // 1.2 接收伺服器的本地運算指令
-    socket.on('server-requests-puzzle-generation', ({ difficulty }) => {
-      console.log(`[前端] 收到伺服器的本地運算指令！難度: ${difficulty}`);
-      if (boardElement) boardElement.innerHTML = `<h2>收到指揮官指令！<br>正在您的電腦上高速產生謎題...</h2>`;
-      
-      if (window.electronAPI) {
-        window.electronAPI.generatePuzzle({ difficulty, roomId: currentGameId });
-      } else {
-        console.error("[前端] 錯誤：收到本地運算指令，但找不到 window.electronAPI！");
-        showCustomAlert("APP 內部通訊錯誤，無法啟動本地運算。");
+    // --- 多人連線彈窗按鈕事件 ---
+    if (createMultiplayerRoomBtn) {
+      createMultiplayerRoomBtn.addEventListener("click", () => {
+        if (multiplayerJoinModalOverlay) multiplayerJoinModalOverlay.classList.add("hidden");
+        socket.emit("createRoom", {
+          playerName: myPlayerName,
+          gameType: "sudoku",
+          isSinglePlayer: false,
+        });
+        showWaitingScreen("正在建立多人房間...");
+      });
+    }
+
+    if (joinRoomBtn) {
+      const executeJoin = () => {
+        // 確保 roomIdInput 存在，並取得它的值
+        if (!roomIdInput) return;
+        
+        const roomId = roomIdInput.value.trim(); 
+        if (!roomId) {
+          showCustomAlert("請輸入房號！");
+          return;
+        }
+        
+        // ✨ 純粹發送請求，不切換畫面
+        socket.emit("requestJoinRoom", {
+          roomId: roomId,
+          playerName: myPlayerName
+        });
+      };
+
+      // 為了避免重複綁定，先移除可能存在的舊事件
+      joinRoomBtn.replaceWith(joinRoomBtn.cloneNode(true));
+      // 重新取得乾淨的按鈕
+      const cleanJoinBtn = document.getElementById("join-room-btn");
+      if (cleanJoinBtn) {
+          cleanJoinBtn.addEventListener("click", executeJoin);
       }
+      
+      if (roomIdInput) {
+          roomIdInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") executeJoin();
+          });
+      }
+    }
+
+    if (cancelMultiplayerBtn) {
+      cancelMultiplayerBtn.addEventListener("click", () => {
+        if (multiplayerJoinModalOverlay) multiplayerJoinModalOverlay.classList.add("hidden");
+        if (sudokuModeModalOverlay) sudokuModeModalOverlay.classList.remove("hidden");
+      });
+    }
+
+    // --- 處理伺服器回傳的房間事件 ---
+    socket.on("roomCreated", (data) => {
+        if (gameMode === 'multiplayer') {
+            currentGameId = data.roomId;
+            iAmHost = true;
+            showWaitingScreen(currentGameId);
+            updateTimerDisplay(0); // 觸發房號顯示
+            updatePlayerListUI([{
+                id: myPlayerId,
+                name: myPlayerName,
+                isHost: true
+            }]);
+        }
     });
 
-    // 1.3 監聽來自 Preload 的廣播
-    window.addEventListener('puzzle-result', (event) => {
-      const result = event.detail;
-      console.log('[前端] 監聽到 Preload 廣播，收到運算成果！', result);
-      
-      if (result && !result.error) {
-        console.log('[前端] 成果有效，正在上繳給伺服器...');
-        socket.emit('client-submits-generated-puzzle', { roomId: currentGameId, result: result });
-      } else {
-        console.error('[前端] 本地運算回報錯誤:', result.error);
-        showCustomAlert(`本地運算時發生錯誤：<br>${result.error}`);
-        socket.emit('client-submits-generated-puzzle', { roomId: currentGameId, result: { error: result.error || '未知錯誤' } });
-      }
+    socket.on("joinRoomResult", (data) => {
+        console.log("[前端] 收到 joinRoomResult:", data);
+        if (gameMode === 'multiplayer') {
+            if (data.success) {
+                if (multiplayerJoinModalOverlay) multiplayerJoinModalOverlay.classList.add("hidden");
+                currentGameId = data.roomId;
+                iAmHost = data.isHost;
+                
+                // 1. 強制把畫面中間的字換成房號
+                showWaitingScreen(currentGameId); 
+                // 2. 強制把右上角換成房號
+                updateTimerDisplay(0); 
+                
+            } else {
+                hideWaitingScreen();
+                showCustomAlert(data.message || "加入房間失敗");
+                const modal = document.getElementById("multiplayer-join-modal-overlay");
+                if (modal) modal.classList.remove("hidden");
+            }
+        }
     });
 
-    // ======================================================
-    // --- 2. 從你原本程式碼中，集中過來的監聽器 ---
-    // ======================================================
+    socket.on("updateRoomPlayers", (data) => {
+        console.log("[前端] 收到玩家名單更新:", data.players);
+        
+        // 1. 初始化或更新對手狀態清單
+        opponentStates = data.players.map(p => ({
+            playerId: p.id,
+            playerName: p.name,
+            progress: -1, 
+            status: p.isHost ? 'host' : 'waiting', 
+            finishTime: null
+        }));
+        
+        // 2. 更新畫面上的玩家列表 (這會連帶觸發防呆機制，把按鈕變回大地色！)
+        updatePlayerListUI(data.players);
+        
+        // 3. 更新進度條 UI
+        updateOpponentProgressUI(); 
+    });
 
     socket.on('sudoku_dimensional_storm_hit', (data) => {
         if (data && data.plan) {
@@ -1903,13 +2146,16 @@ function setupEventListeners() {
         }
     });
 
+    // --- 修正後的觀戰更新邏輯 ---
     socket.on('sudoku_spectateUpdate', (data) => {
-        if (!data || !data.puzzle || !data.initialPuzzle || !data.playerName) {
-            console.error("[偵錯日誌] 錯誤：收到的觀戰資料不完整或格式錯誤！");
-            return;
-        }
+        if (!data || !data.puzzle || !data.initialPuzzle || !data.playerName) return;
+        
         const { puzzle: spectatePuzzle, initialPuzzle: spectateInitialPuzzle, playerName, pencilMarks, hintCount, validateCount } = data;
+        
+        // 繪製觀戰棋盤
         drawSpectatorBoard(spectatePuzzle, spectateInitialPuzzle, pencilMarks, playerName);
+        
+        // 更新右側資訊面板
         updateInfoPanelForSpectator(playerName, hintCount, validateCount);
     });
 
@@ -1918,86 +2164,34 @@ function setupEventListeners() {
         updateOpponentProgressUI();
         updatePauseButtonState();
         const myState = fullPlayerState.find(p => p.playerId === myPlayerId);
+
         if (myState) {
             myCurrentStatus = myState.status;
             hintCount = myState.hintCount;
             validateCount = myState.validateCount;
             updateGameInfo();
+
             const pauseCountDisplay = document.getElementById('info-pause-count-display');
-            if (pauseCountDisplay) {
-                pauseCountDisplay.textContent = myState.pauseUses > 0 ? `${myState.pauseUses} 次` : "用完";
-            }
+            if (pauseCountDisplay) pauseCountDisplay.textContent = myState.pauseUses;
+            
             if (menuRestartBtn) {
                 if (myCurrentStatus === 'playing') {
-                    menuRestartBtn.textContent = '投降';
+                    // 檢查是否只剩我一個人在玩
+                    const activePlayers = fullPlayerState.filter(p => p.status === 'playing').length;
+                    if (activePlayers === 1 && fullPlayerState.length > 1) {
+                        menuRestartBtn.textContent = '放棄遊戲';
+                    } else {
+                        menuRestartBtn.textContent = '投降';
+                    }
                 } else {
-                    menuRestartBtn.textContent = '返回大廳';
+                    menuRestartBtn.textContent = '退出房間'; // ✨ 投降後改為退出房間
                 }
             }
         }
-        if (myState.status === 'finished' && !iHaveFinished && gameMode === 'multiplayer') {
-            iHaveFinished = true;
-            disableGameControls(true);
-            showCustomAlert("恭喜您已完成！請等待其他玩家或在選單中選擇離開。");
-        }
     });
 
-    socket.on('sudoku_gameOver', ({ finalRanking }) => {
-        isPaused = true;
-        disableGameControls(true);
-        let rankingText = '<h3>最終排名</h3><ol>';
-        if (finalRanking && finalRanking.length > 0) {
-            finalRanking.forEach((player, index) => {
-                const time = new Date(player.finishTime * 1000).toISOString().substr(11, 8);
-                rankingText += `<li>${player.playerName} - ${time}</li>`;
-            });
-        } else {
-            rankingText += '<li>沒有完成的玩家。</li>';
-        }
-        rankingText += '</ol>';
-        showCustomAlert(`遊戲結束！<br>${rankingText}`);
-        setUIState('gameOver_multiplayer');
-        setTimeout(() => { showSolutionView(); }, 5000);
-    });
 
-    socket.on('sudoku_timeUpdate', ({ seconds: serverSeconds }) => {
-        if (!isPaused) {
-            updateTimerDisplay(serverSeconds);
-        }
-    });
-
-    socket.on('sudoku_generation_started', async (data) => {
-      console.log("[前端日誌 1/7] 收到 'sudoku_generation_started' 事件。", data);
-      hideWaitingScreen();
-      currentLotteryResult = data.lotteryResult || null;
-      const difficulty = initialState.difficulty || gameSettings.difficulty;
-      console.log(`[前端日誌 2/7] 當前難度判定為: ${difficulty}，抽獎結果為: ${currentLotteryResult}`);
-      if (boardElement) {
-          boardElement.innerHTML = `<div class="loading-container"><h2>等待伺服器準備...</h2></div>`;
-          boardElement.classList.add("is-loading");
-      }
-      if (inGameControls) inGameControls.classList.remove('hidden');
-      resetControlPanel();
-      disableGameControls(true);
-      if (difficulty === 'extreme') {
-          const loadingContainer = boardElement.querySelector(".loading-container");
-          if (loadingContainer) {
-              loadingContainer.innerHTML = `<h2 id="loading-text-animation">${data.message || '正在生成謎題...'}</h2><div class="progress-bar-container"><div class="progress-bar"><div id="generation-progress-bar-fill"></div></div><span id="generation-progress-percentage">0%</span></div>`;
-          }
-      }
-      if (currentLotteryResult) {
-          console.log("[前端日誌 4/7] 偵測到抽獎結果，準備呼叫 setupLotteryStage...");
-          await setupLotteryStage(currentLotteryResult);
-          console.log("[前端日誌 6/7] setupLotteryStage 執行完畢。");
-      } else {
-          console.log("[前端日誌 4/7] 無抽獎結果，跳過拉霸機動畫。");
-      }
-      console.log("[前端日誌 7/7] 準備向後端回報 'client_ready_for_countdown'。");
-      socket.emit('sudoku_client_ready_for_countdown', { roomId: currentGameId });
-      if (boardElement) {
-          boardElement.innerHTML = `<div class="loading-container"><h2>等待遊戲開始...</h2></div>`;
-      }
-    });
+    
 
     socket.on('sudoku_dispatch_progress', ({ progress }) => {
         const percentageSpan = document.getElementById("generation-progress-percentage");
@@ -2009,38 +2203,7 @@ function setupEventListeners() {
         }
     });
 
-    socket.on('sudoku_generation_progress', ({ progress }) => {
-        const percentageSpan = document.getElementById("generation-progress-percentage");
-        const progressBarFill = document.getElementById("generation-progress-bar-fill");
-        const displayProgress = 1 + Math.floor(progress * 0.99);
-        if (percentageSpan) percentageSpan.textContent = `${displayProgress}%`;
-        if (progressBarFill) progressBarFill.style.width = `${displayProgress}%`;
-        if (!lotteryHasBeenTriggered && currentLotteryResult && progress >= 20) {
-            lotteryHasBeenTriggered = true; 
-            const randomDelay = Math.random() * 10000; 
-            console.log(`[拉霸機] 實際進度已達 ${progress}%，將在 ${randomDelay.toFixed(0)} 毫秒後觸發動畫。`);
-            setTimeout(() => {
-                setupLotteryStage(currentLotteryResult);
-            }, randomDelay);
-        }
-    });
-
-    socket.on("playerJoinRequest", (data) => {
-        if (iAmHost) {
-            if (data.status) {
-                removeJoinRequestFromUI(data.requesterId);
-            } else {
-                addJoinRequestToUI(data.requesterId, data.playerName, data.timeout);
-            }
-        }
-    });
-
-    socket.on("updateRoomPlayers", (data) => {
-        if (iAmHost && data.requesterId) { removeJoinRequestFromUI(data.requesterId); }
-        opponentStates = data.players.map(p => ({ playerId: p.id, playerName: p.name, progress: -1, status: p.isHost ? 'host' : 'waiting', finishTime: null }));
-        updatePlayerListUI(data.players);
-        updateOpponentProgressUI();
-    });
+    
 
     socket.on('sudoku_gamePaused', ({ requesterId, playerName }) => {
         isPaused = true;
@@ -2057,20 +2220,12 @@ function setupEventListeners() {
             }
             disableGameControls(true, ['pause-btn', 'game-menu-btn']); 
         } else {
-            disableGameControls(true);
+            disableGameControls(true, ['game-menu-btn']);
             showCustomAlert(`${playerName || '對手'} 已暫停遊戲。`);
         }
     });
 
-    socket.on('sudoku_gameResumed', () => {
-        isPaused = false;
-        if (boardElement && boardElement.classList.contains('is-loading')) {
-            boardElement.classList.remove("is-loading");
-            drawBoard();
-        }
-        disableGameControls(false);
-        if (pauseBtn) pauseBtn.textContent = "暫停";
-    });
+   
 
     socket.on('sudoku_timerStart', (data) => {
         const { puzzle: puzzleData, difficulty, holes, specialMode, blackoutNumbers } = data;
@@ -2115,29 +2270,59 @@ function setupEventListeners() {
     });
 
     socket.on("chatMessage", addChatMessageToUI);
-  }
+  } // <--- 關鍵！提早把括號關起來，讓後面的函式獨立出來
 
   // --- 處理玩家選擇單人或多人模式 ---
   function handleModeSelection(mode) {
     console.log(`[模式選擇] 玩家選擇了: ${mode}`);
     gameMode = mode; 
     
-    if (sudokuModeModalOverlay) {
-        sudokuModeModalOverlay.classList.add("hidden");
-    }
+    if (sudokuModeModalOverlay) sudokuModeModalOverlay.classList.add("hidden");
 
     if (mode === "single") {
-      if (difficultyModalOverlay) {
-        difficultyModalOverlay.classList.remove("hidden");
-      }
+      if (difficultyModalOverlay) difficultyModalOverlay.classList.remove("hidden");
     } else {
-      socket.emit("createRoom", {
-        playerName: myPlayerName,
-        gameType: "sudoku",
-        isSinglePlayer: false, 
-      });
-      showWaitingScreen("正在建立多人房間...");
+      // 顯示多人連線專屬的輸入/創建彈窗
+      if (multiplayerJoinModalOverlay) {
+        if (roomIdInput) roomIdInput.value = ""; // 清空之前的輸入
+        multiplayerJoinModalOverlay.classList.remove("hidden");
+      }
     }
+  }
+
+  // --- 🌟 補上的函式 1：重置回選擇模式畫面 ---
+  function resetToModeSelection() {
+      resetUIForNewGame(); // 確保清空前一局的狀態
+      if (appContainer) appContainer.classList.add("hidden");
+      if (solutionView) solutionView.classList.add("hidden");
+      if (gameMenuModalOverlay) gameMenuModalOverlay.classList.add("hidden");
+      
+      if (sudokuModeModalOverlay) sudokuModeModalOverlay.classList.remove("hidden");
+      if (timerValueElement) timerValueElement.textContent = "00:00:00";
+  }
+
+  // --- 🌟 補上的函式 2：重新開始當前單人遊戲 ---
+  function restartCurrentGame() {
+      // 1. 恢復初始盤面 (深拷貝)
+      puzzle = JSON.parse(JSON.stringify(initialPuzzle));
+      // 2. 清空所有筆記
+      pencilMarksData = Array(9).fill().map(() => Array(9).fill().map(() => new Set()));
+      // 3. 重置歷史紀錄
+      history = [];
+      historyIndex = -1;
+      recordHistoryState(null);
+      // 4. 重置計時器
+      resetTimer();
+      isTimerStartedByFirstMove = false;
+      // 5. 解除暫停狀態
+      isPaused = false;
+      if (pauseBtn) pauseBtn.textContent = "暫停";
+      // 6. 重新繪製畫面並清除錯誤紅框
+      drawBoard();
+      updateProgress();
+      updateNumberCounter();
+      clearAllHighlights();
+      clearAllErrors();
   }
 
   // ======================================================
@@ -2152,6 +2337,11 @@ function setupEventListeners() {
     highlightHelperCheckbox = document.getElementById(
       "highlight-helper-checkbox"
     );
+    multiplayerJoinModalOverlay = document.getElementById("multiplayer-join-modal-overlay");
+    roomIdInput = document.getElementById("room-id-input");
+    joinRoomBtn = document.getElementById("join-room-btn");
+    createMultiplayerRoomBtn = document.getElementById("create-multiplayer-room-btn");
+    cancelMultiplayerBtn = document.getElementById("cancel-multiplayer-btn");
     winModalOverlay = document.getElementById("win-modal-overlay");
     winModalNewGameBtn = document.getElementById("win-modal-new-game-btn");
     sudokuModeModalOverlay = document.getElementById(
@@ -2213,6 +2403,24 @@ function setupEventListeners() {
       "solution-back-to-lobby-btn"
     );
     const solutionNewGameBtn = document.getElementById("solution-new-game-btn");
+
+    if (solutionNewGameBtn) {
+        solutionNewGameBtn.addEventListener("click", () => {
+            if (gameMode === 'multiplayer') {
+                sessionStorage.removeItem('sudoku_reconnect_gameId');
+                sessionStorage.removeItem('sudoku_reconnect_playerId');
+                console.log('[斷線保護] 玩家開啟新局，已清理重連資訊。');
+            } else if (gameMode === 'single') {
+                socket.emit('sudoku_leave_single_player_game');
+                console.log('[Client] 已通知伺服器離開單人遊戲。');
+            }
+            // 重置 UI 並回到模式選擇畫面
+            resetUIForNewGame();            
+            if (appContainer) appContainer.classList.add("hidden");
+          if (sudokuModeModalOverlay) sudokuModeModalOverlay.classList.remove("hidden");
+      });
+    }
+
     const startGameBtn = document.getElementById("sudoku-start-game-btn");
     const hostDifficultyButtons = document.querySelectorAll(
       "#host-difficulty-selection .difficulty-btn"
@@ -2260,9 +2468,12 @@ function setupEventListeners() {
       button.addEventListener("click", () => {
         if (iAmHost && !button.disabled) {
           const selectedDifficulty = button.dataset.difficulty;
+          const customHoles = document.getElementById('custom-holes-slider') ? parseInt(document.getElementById('custom-holes-slider').value) : 45; // 取得洞數
+          
           socket.emit("sudoku_startGame", {
             roomId: currentGameId,
             difficulty: selectedDifficulty,
+            holes: customHoles === 60 ? 59 : customHoles // 傳遞自訂洞數
           });
           hideWaitingScreen();
           boardElement.innerHTML = "<h2>正在為所有玩家產生謎題...</h2>";
@@ -2308,83 +2519,121 @@ function setupEventListeners() {
       });
     }
 
-  if (difficultyButtons) {
-  difficultyButtons.forEach((button) => {
-    button.addEventListener("click", (event) => {
-      const selectedDifficulty = event.currentTarget.dataset.difficulty;
-      difficultyModalOverlay.classList.add("hidden");
-      appContainer.classList.remove("hidden");
-      hideWaitingScreen();
+  // ==========================================
+    // --- 1. 處理低中高與「自訂」按鈕的點擊 ---
+    // ==========================================
+    if (difficultyButtons) {
+      difficultyButtons.forEach((button) => {
+        button.addEventListener("click", (event) => {
+          const selectedDifficulty = event.currentTarget.dataset.difficulty;
+          
+          // ✨ 如果點擊的是「自訂」，則關閉當前視窗，開啟滑桿彈窗並中斷後續動作
+          if (selectedDifficulty === 'custom') {
+            difficultyModalOverlay.classList.add("hidden");
+            const customModal = document.getElementById("custom-difficulty-modal-overlay");
+            if (customModal) customModal.classList.remove("hidden");
+            return; 
+          }
 
-      // 顯示通用的載入畫面
-      if (boardElement) {
-        boardElement.innerHTML = `<h2>正在向伺服器請求謎題...</h2><p>請稍候...</p>`;
-        boardElement.classList.add("is-loading");
-      }
-
-      // --- ▼▼▼ 恢復判斷邏輯，但決策依然交給伺服器 ▼▼▼ ---
-
-      if (gameMode === 'single') {
-        // --- 單人模式：必須先建立房間，再開始遊戲 ---
-        
-        // 1. 通知伺服器建立一個「單人」房間
-        socket.emit("createRoom", {
-          playerName: myPlayerName,
-          gameType: "sudoku",
-          isSinglePlayer: true,
+          if (gameMode === 'single') {
+            socket.emit("createRoom", { playerName: myPlayerName, gameType: "sudoku", isSinglePlayer: true });
+            socket.once("roomCreated", (data) => {
+              currentGameId = data.roomId;
+              iAmHost = true;
+              socket.emit("sudoku_startGame", { roomId: currentGameId, difficulty: selectedDifficulty });
+            });
+          } else {
+            socket.emit("sudoku_startGame", { roomId: currentGameId, difficulty: selectedDifficulty });
+          }
         });
+      });
+    }
 
-        // 2. 用 .once 監聽，確保只觸發一次
-        socket.once("roomCreated", (data) => {
-          currentGameId = data.roomId;
-          iAmHost = true;
+    // ==========================================
+    // --- 2. 處理自訂滑桿彈窗的連動邏輯 ---
+    // ==========================================
+    const customDiffModal = document.getElementById("custom-difficulty-modal-overlay");
+    const cancelCustomBtn = document.getElementById("cancel-custom-diff-btn");
+    const confirmCustomBtn = document.getElementById("confirm-custom-diff-btn");
+    const customSlider = document.getElementById("custom-holes-slider");
+    const customDisplay = document.getElementById("holes-value-display");
+    const customTextDisplay = document.getElementById("holes-diff-text");
 
-          // 3. 房間建立成功後，才發送「開始遊戲」指令
-          socket.emit("sudoku_startGame", {
-            roomId: currentGameId,
-            difficulty: selectedDifficulty,
-          });
+    // 拖動滑桿時即時更新數字與難度文字
+    if (customSlider) {
+        customSlider.addEventListener('input', (e) => {
+            let val = parseInt(e.target.value);
+            customDisplay.textContent = val === 60 ? '59+' : val;
+            if (val < 41) customTextDisplay.textContent = '簡單';
+            else if (val < 51) customTextDisplay.textContent = '中等';
+            else customTextDisplay.textContent = '困難';
         });
+    }
 
-      } else { // gameMode === 'multiplayer'
-        // --- 多人模式：房間已存在，直接開始遊戲 ---
-        // (因為多人模式下，currentGameId 早就已經在你建立或加入房間時就設定好了)
-        socket.emit("sudoku_startGame", {
-          roomId: currentGameId,
-          difficulty: selectedDifficulty,
+    // 按下取消：關閉自訂彈窗，回到四顆按鈕的選擇畫面
+    if (cancelCustomBtn) {
+        cancelCustomBtn.addEventListener("click", () => {
+            if (customDiffModal) customDiffModal.classList.add("hidden");
+            if (difficultyModalOverlay) difficultyModalOverlay.classList.remove("hidden"); 
         });
-      }
-      // --- ▲▲▲ 判斷邏輯結束 ▲▲▲ ---
-    });
-  });
-}
+    }
+
+    
+    // 按下確認：讀取滑桿數值並發送遊戲開始請求
+    if (confirmCustomBtn) {
+        confirmCustomBtn.addEventListener("click", () => {
+            if (customDiffModal) customDiffModal.classList.add("hidden");
+
+            let val = parseInt(customSlider.value);
+            const actualHoles = val; 
+            let baseDifficulty = 'medium';
+            if (val <= 40) baseDifficulty = 'easy';
+            else if (val >= 51) baseDifficulty = 'hard';
+
+            // 🛑 這裡已刪除所有 boardElement.innerHTML 的干涉代碼，全權交給伺服器廣播處理
+            if (gameMode === 'single') {
+                socket.emit("createRoom", { playerName: myPlayerName, gameType: "sudoku", isSinglePlayer: true });
+                socket.once("roomCreated", (data) => {
+                    currentGameId = data.roomId;
+                    iAmHost = true;
+                    socket.emit("sudoku_startGame", { roomId: currentGameId, difficulty: baseDifficulty, holes: actualHoles });
+                });
+            } else {
+                socket.emit("sudoku_startGame", { roomId: currentGameId, difficulty: baseDifficulty, holes: actualHoles });
+            }
+        });
+    }
+
 
 if (menuRestartBtn) {
   menuRestartBtn.addEventListener("click", async () => {
     if (gameMenuModalOverlay) gameMenuModalOverlay.classList.add("hidden");
 
     if (gameMode === 'multiplayer') {
-      // 多人模式的「投降/返回大廳」邏輯維持不變
       if (myCurrentStatus === 'playing') {
-        const message = "您確定要投降嗎？您將留在房間內但無法繼續作答。<br>可點選進度條切換至他人盤面觀戰。";
-        const userConfirmed = await showCustomConfirm(message, "確認投降");
+        const message = menuRestartBtn.textContent === '放棄遊戲' 
+            ? "只剩您一個人了，確定要放棄遊戲並進行結算嗎？" 
+            : "您確定要投降嗎？您將留在房間內但無法繼續作答。<br>可點選進度條切換至他人盤面觀戰。";
+        const userConfirmed = await showCustomConfirm(message, "確認");
         if (userConfirmed) {
             socket.emit("sudoku_surrender", { roomId: currentGameId });
+            disableGameControls(true, ['game-menu-btn']);
             iHaveSurrendered = true;
         }
       } else {
-        socket.emit("leaveRoom", { roomId: currentGameId });
-        returnToLobby();
+        // ✨ 投降後的退出房間確認彈窗
+        const confirmed = await showCustomConfirm("確定要退出房間嗎？", "退出確認");
+        if (confirmed) {
+            socket.emit("leaveRoom", { roomId: currentGameId });
+            resetToModeSelection();
+        }
       }
     } else {
       // ▼▼▼ 【核心修正】單人模式的「重新開始本局」邏輯 ▼▼▼
-      const message = "您確定要放棄當前的進度，並重新開始這一局嗎？";
-      const userConfirmed = await showCustomConfirm(message, "重新開始？");
+      const userConfirmed = await showCustomConfirm("您確定要放棄當前的進度，並重新開始這一局嗎？", "重新開始？");
       if (userConfirmed) {
-        // 呼叫我們的新函式，而不是舊的 resetUIForNewGame 和 newGame
         restartCurrentGame();
       }
-      // ▲▲▲ 修正結束 ▲▲▲
     }
   });
 }
@@ -2448,30 +2697,7 @@ if (menuRestartBtn) {
       menuResumeBtn.addEventListener("click", () =>
         gameMenuModalOverlay.classList.add("hidden")
       );
-    if (menuBackToLobbyBtn)
-      menuBackToLobbyBtn.addEventListener("click", async () => {
-        if (gameMenuModalOverlay) gameMenuModalOverlay.classList.add("hidden");
-        if (currentGameId && gameMode === 'multiplayer') { // 如果是多人遊戲，才發送離開房間事件
-          socket.emit("leaveRoom", { roomId: currentGameId });
-        }
-        const wantsSolution = await showCustomConfirm(
-          "在返回大廳前，您要先查看本局的完整解答嗎？",
-          "查看解答？"
-        );
-        if (wantsSolution) {
-          showSolutionView();
-        } else {
-          if (gameMode === 'multiplayer') {
-              sessionStorage.removeItem('sudoku_reconnect_gameId');
-              sessionStorage.removeItem('sudoku_reconnect_playerId');
-              console.log('[斷線保護] 玩家正常離開，已清理重連資訊。');
-          }
-          if (gameMode === 'single') {
-            socket.emit('sudoku_leave_single_player_game');
-          }
-          returnToLobby();
-        }
-      });
+    
 
     if (menuNewGameBtn)
       menuNewGameBtn.addEventListener("click", async () => {
@@ -2579,55 +2805,7 @@ async function handleNumberInput(number) {
     }
 }
 
-    
-    if (winModalNewGameBtn)
-      winModalNewGameBtn.addEventListener("click", () => {
-      if (gameMode === 'multiplayer') {
-            sessionStorage.removeItem('sudoku_reconnect_gameId');
-            sessionStorage.removeItem('sudoku_reconnect_playerId');
-            console.log('[斷線保護] 玩家正常離開，已清理重連資訊。');
-        }
-        if (gameMode === 'single') {
-          socket.emit('sudoku_leave_single_player_game');
-        }
-        resetUIForNewGame();
-        winModalOverlay.classList.add("hidden");
-        appContainer.classList.add("hidden");
-        difficultyModalOverlay.classList.remove("hidden");
-      });
-
-    if (solutionBackToLobbyBtn)
-      solutionBackToLobbyBtn.addEventListener("click", () => {
-    if (gameMode === 'multiplayer') {
-            sessionStorage.removeItem('sudoku_reconnect_gameId');
-            sessionStorage.removeItem('sudoku_reconnect_playerId');
-            console.log('[斷線保護] 玩家從解答畫面返回大廳，已清理重連資訊。');
-            socket.emit("leaveRoom", { roomId: currentGameId });
-        } 
-        if (currentGameId) socket.emit("leaveRoom", { roomId: currentGameId });
-        if (gameMode === 'single') {
-          socket.emit('sudoku_leave_single_player_game');
-        } else if (currentGameId) { // 多人模式
-          socket.emit("leaveRoom", { roomId: currentGameId });
-        }
-        returnToLobby();
-      });
-
-    if (solutionNewGameBtn)
-      solutionNewGameBtn.addEventListener("click", () => {
-    if (gameMode === 'multiplayer') {
-            sessionStorage.removeItem('sudoku_reconnect_gameId');
-            sessionStorage.removeItem('sudoku_reconnect_playerId');
-            console.log('[斷線保護] 玩家從解答畫面開啟新局，已清理重連資訊。');
-        }
-      if (gameMode === 'single') {
-          socket.emit('sudoku_leave_single_player_game');
-        }
-        appContainer.classList.add("hidden");
-        difficultyModalOverlay.classList.remove("hidden");
-      });
-
-    if (paletteElement) {
+      if (paletteElement) {
       paletteElement.innerHTML = "";
       for (let i = 1; i <= 9; i++) {
         const numberDiv = document.createElement("div");
@@ -2860,155 +3038,178 @@ socket.on('sudoku_storm_hit', ({ r, c, mark }) => {
       }
   });
 
-  socket.on('sudoku_spectateUpdate', (data) => {
-    // 步驟 1: 先在日誌中打印出從伺服器收到的最原始的資料
-    
-    
-    // 步驟 2: 進行嚴格的資料檢查
-    if (!data || !data.puzzle || !data.initialPuzzle || !data.playerName) {
-        // 只有在資料真的不完整時，才打印錯誤訊息並停止執行
-        console.error("[偵錯日誌] 錯誤：收到的觀戰資料不完整或格式錯誤！");
-        return;
-    }
-    
-    // 步驟 3: 如果資料檢查通過，才解構並呼叫繪圖函式
-    const { puzzle: spectatePuzzle, initialPuzzle: spectateInitialPuzzle, playerName, pencilMarks, hintCount, validateCount } = data;
-    drawSpectatorBoard(spectatePuzzle, spectateInitialPuzzle, pencilMarks, playerName);
-    highlightOpponentSelection(selectedCoords);
-    // 呼叫新的資訊欄更新函式
-    updateInfoPanelForSpectator(playerName, hintCount, validateCount);
-});
 
-
-    socket.on('sudoku_full_state_update', (fullPlayerState) => {
-    opponentStates = fullPlayerState;
-    updateOpponentProgressUI();
-    updatePauseButtonState();
-    const myState = fullPlayerState.find(p => p.playerId === myPlayerId);
-
-    // ▼▼▼▼▼ 核心修改 ▼▼▼▼▼
-    if (myState) {
-        myCurrentStatus = myState.status;
-
-        // ▼▼▼▼▼ 核心修正：接收伺服器的權威狀態並更新 UI ▼▼▼▼▼
+socket.on('sudoku_gameOver', ({ finalRanking }) => {
+        isPaused = true;
+        disableGameControls(true, ['game-menu-btn']); 
         
-        // 1. 用伺服器傳來的最新次數，更新前端的變數
-        hintCount = myState.hintCount;
-        validateCount = myState.validateCount;
+        const winTitle = document.getElementById('win-modal-title');
+        const winSubtitle = document.getElementById('win-modal-subtitle');
+        if (winTitle) winTitle.textContent = "🏆 最終排行榜";
+        if (winSubtitle) winSubtitle.classList.add("hidden");
 
-        // 2. 呼叫 UI 更新函式，來顯示最新的次數
-        updateGameInfo();
+        // ✨ 建立詳細的表格排行榜 HTML
+        let rankingHTML = `
+        <div class="ranking-table-container">
+            <table class="ranking-table">
+                <thead>
+                    <tr>
+                        <th>排名</th><th>玩家</th><th>耗時</th><th>正確率</th><th>填寫率</th><th>用掉提示</th><th>用掉檢查</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        
+        if (finalRanking && finalRanking.length > 0) {
+            finalRanking.forEach((player, index) => {
+                // 時間格式化 (若為未完成且無時間紀錄則顯示 --:--)
+                const timeStr = player.finishTime !== 999999 
+                    ? new Date(player.finishTime * 1000).toISOString().substr(11, 8) 
+                    : '--:--:--';
+                
+                const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🎖️';
+                
+                let statusText = '未知';
+                let statusColor = '#333';
+                if (player.status === 'finished') { statusText = '通關'; statusColor = '#28a745'; }
+                else if (player.status === 'surrendered') { statusText = '投降'; statusColor = '#dc3545'; }
+                else if (player.status === 'disconnected') { statusText = '離線'; statusColor = '#6c757d'; }
+                else { statusText = '未完成'; statusColor = '#f39c12'; }
 
-        // ▲▲▲▲▲ 修正結束 ▲▲▲▲▲
-
-        const pauseCountDisplay = document.getElementById('info-pause-count-display');
-        if (pauseCountDisplay) {
-            pauseCountDisplay.textContent = myState.pauseUses > 0 ? `${myState.pauseUses} 次` : "用完";
+                rankingHTML += `
+                <tr>
+                    <td>${medal}</td>
+                    <td style="font-weight: bold;">${player.playerName}</td>
+                    <td>${timeStr}</td>
+                    <td>${player.accuracy}%</td>
+                    <td>${player.fillRate}%</td>
+                    <td>${player.hintCount}</td>
+                    <td>${player.validateCount}</td>
+                    
+                </tr>`;
+            });
         }
-        if (menuRestartBtn) {
-            if (myCurrentStatus === 'playing') {
-                menuRestartBtn.textContent = '投降';
-            } else { // 如果狀態是 'surrendered', 'finished', 'disconnected'
-                menuRestartBtn.textContent = '返回大廳';
+        rankingHTML += '</tbody></table></div>';
+
+        const winStatContainer = document.getElementById('win-stats-container');
+        if (winStatContainer) winStatContainer.innerHTML = rankingHTML;
+
+        // 隱藏觀戰按鈕，顯示退出房間
+        const winModalExtremeBtn = document.getElementById('win-modal-extreme-challenge-btn');
+        if (winModalExtremeBtn) winModalExtremeBtn.classList.add("hidden");
+
+        const exitRoomBtn = document.getElementById('win-modal-exit-room-btn');
+        if (exitRoomBtn) {
+            exitRoomBtn.classList.remove("hidden");
+            exitRoomBtn.onclick = () => {
+                socket.emit("leaveRoom", { roomId: currentGameId });
+                resetToModeSelection();
+            };
+        }
+
+        // 修改再來一局按鈕
+        if (winModalNewGameBtn) {
+            winModalNewGameBtn.classList.remove("hidden");
+            if (iAmHost) {
+                winModalNewGameBtn.textContent = "再來一局 (發送邀請)";
+                winModalNewGameBtn.onclick = () => {
+                    currentlySpectatingId = null;
+                    socket.emit('sudoku_request_rematch', { roomId: currentGameId });
+                    winModalOverlay.classList.add("hidden");
+                    resetUIForNewGame();
+                    updateTimerDisplay(0);
+                    showWaitingScreen(currentGameId);
+                };
+            } else {
+                winModalNewGameBtn.textContent = "等待房主決定...";
+                winModalNewGameBtn.disabled = true;
             }
         }
-    }
-    // ▲▲▲▲▲ 修改結束 ▲▲▲▲▲
 
-    if (myState.status === 'finished' && !iHaveFinished && gameMode === 'multiplayer') {
-        iHaveFinished = true;
-        disableGameControls(true);
-        showCustomAlert("恭喜您已完成！請等待其他玩家或在選單中選擇離開。");
-    }
-});
+        if (winModalOverlay) winModalOverlay.classList.remove("hidden");
+    });
 
-
-// ✨ 新增：監聽「遊戲正式結束」的事件
-socket.on('sudoku_gameOver', ({ finalRanking }) => {
-    isPaused = true;
-    disableGameControls(true); // 禁用所有遊戲內控制項
-
-    // 建立最終排名訊息
-    let rankingText = '<h3>最終排名</h3><ol>';
-    if (finalRanking && finalRanking.length > 0) {
-        finalRanking.forEach((player, index) => {
-            const time = new Date(player.finishTime * 1000).toISOString().substr(11, 8);
-            rankingText += `<li>${player.playerName} - ${time}</li>`;
-        });
-    } else {
-        rankingText += '<li>沒有完成的玩家。</li>';
-    }
-    rankingText += '</ol>';
-
-    showCustomAlert(`遊戲結束！<br>${rankingText}`);
-    setUIState('gameOver_multiplayer'); // 設定遊戲結束狀態，以便更新選單按鈕文字
-
-    // 幾秒後顯示解答
-    setTimeout(() => {
-        showSolutionView();
-    }, 5000);
-});
-
-  socket.on('sudoku_timeUpdate', ({ seconds: serverSeconds }) => {
-      // ▼▼▼ 【核心修正】移除 gameMode 的判斷 ▼▼▼
-      // 只要遊戲沒有暫停，就接收伺服器的時間更新
-      if (!isPaused) {
-          updateTimerDisplay(serverSeconds);
-      }
-});
-
-   socket.on('sudoku_generation_started', async (data) => {
-    console.log("[前端日誌 1/7] 收到 'sudoku_generation_started' 事件。", data);
-    hideWaitingScreen();
-    
-    currentLotteryResult = data.lotteryResult || null;
-    const difficulty = initialState.difficulty || gameSettings.difficulty;
-    
-    console.log(`[前端日誌 2/7] 當前難度判定為: ${difficulty}，抽獎結果為: ${currentLotteryResult}`);
-    
-    // --- ⭐ 核心修正：將所有邏輯合併到一個流暢的流程中 ⭐ ---
-
-    if (boardElement) {
-        boardElement.innerHTML = `<div class="loading-container"><h2>等待伺服器準備...</h2></div>`;
-        boardElement.classList.add("is-loading");
-    }
-
-    if (inGameControls) inGameControls.classList.remove('hidden');
-    resetControlPanel();
-    disableGameControls(true);
-
-    // 只有在極限模式下才需要進度條，否則可以略過
-    if (difficulty === 'extreme') {
-        const loadingContainer = boardElement.querySelector(".loading-container");
-        if (loadingContainer) {
-            loadingContainer.innerHTML = `
-                <h2 id="loading-text-animation">${data.message || '正在生成謎題...'}</h2>
-                <div class="progress-bar-container">
-                    <div class="progress-bar"><div id="generation-progress-bar-fill"></div></div>
-                    <span id="generation-progress-percentage">0%</span>
-                </div>`;
+    // --- 3. 接收房主的再來一局邀請 ---
+    socket.on('sudoku_rematch_requested', async () => {
+        if (winModalOverlay) winModalOverlay.classList.add("hidden");
+        const confirmed = await showCustomConfirm("房主邀請您再來一局！是否接受？<br>點選確認進入等待室，點選取消退出房間。", "再來一局？", "接受", "退出房間");
+        if (confirmed) {
+           currentlySpectatingId = null; // ✨ 強制清除觀戰狀態
+            socket.emit('sudoku_accept_rematch', { roomId: currentGameId });
+            resetUIForNewGame();
+            updateTimerDisplay(0); // ✨ 強制立刻刷新右上角，變回顯示房號
+            showWaitingScreen("正在準備新局...");
+        } else {
+            socket.emit("leaveRoom", { roomId: currentGameId });
+            resetToModeSelection();
         }
-    }
-    
-    // 檢查是否有拉霸機動畫的結果，如果有就播放並等待它完成
-    if (currentLotteryResult) {
-        console.log("[前端日誌 4/7] 偵測到抽獎結果，準備呼叫 setupLotteryStage...");
-        // 這裡我們需要等待 setupLotteryStage 函式的 Promise
-        await setupLotteryStage(currentLotteryResult);
-        console.log("[前端日誌 6/7] setupLotteryStage 執行完畢。");
-    } else {
-        console.log("[前端日誌 4/7] 無抽獎結果，跳過拉霸機動畫。");
-    }
-    
-    // 無論是否播放了動畫，現在都向後端回報，表示前端已準備好
-    console.log("[前端日誌 7/7] 準備向後端回報 'client_ready_for_countdown'。");
-    socket.emit('sudoku_client_ready_for_countdown', { roomId: currentGameId });
-    
-    // 在等待後端倒數信號時，顯示等待文字
-    if (boardElement) {
-        boardElement.innerHTML = `<div class="loading-container"><h2>等待遊戲開始...</h2></div>`;
-    }
-});
+    });
+
+    // --- 4. 時間更新監聽器 ---
+    socket.on('sudoku_timeUpdate', ({ seconds: serverSeconds }) => {
+        if (!isPaused) updateTimerDisplay(serverSeconds);
+    });
+
+    // ✨ 最完美的載入畫面與隱藏彈窗邏輯
+    socket.on('sudoku_generation_started', (data) => {
+        console.log("[前端日誌] 收到 'sudoku_generation_started' 事件。", data);
+        
+        // 1. 強制隱藏所有可能擋住畫面的彈窗與大廳文字
+        const waitingView = document.getElementById("waiting-view");
+        if (waitingView) waitingView.classList.add("hidden");
+        // ✨ 解決房主卡住的關鍵：強制隱藏難度選擇彈窗！
+        if (difficultyModalOverlay) difficultyModalOverlay.classList.add("hidden"); 
+        if (appContainer) appContainer.classList.remove("hidden");
+
+        // 2. 初始化控制面板
+        if (gameMode === 'single') {
+            // ✨ 單人模式：直接顯示包含數字小鍵盤的遊戲面板 (填補空白)
+            if (inGameControls) inGameControls.classList.remove('hidden');
+            if (singlePlayerInfoPanel) singlePlayerInfoPanel.classList.remove('hidden');
+            if (multiplayerWaitingPanel) multiplayerWaitingPanel.classList.add('hidden');
+        } else {
+            // ✨ 多人模式：顯示聊天室與玩家列表，隱藏數字鍵盤
+            if (inGameControls) inGameControls.classList.add('hidden');
+            if (multiplayerWaitingPanel) multiplayerWaitingPanel.classList.remove('hidden');
+        }
+        
+        resetControlPanel();
+        // 鎖死所有按鍵，只留遊戲選單可以點
+        disableGameControls(true);
+
+        // 3. 改變左側棋盤區顯示進度條或文字
+        if (boardElement) {
+            boardElement.classList.remove("hidden");
+            boardElement.classList.add("is-loading");
+            
+            const actualHoles = data.holes || 45;
+            if (actualHoles >= 58) {
+                boardElement.innerHTML = `
+                    <div class="loading-container">
+                        <h2 id="loading-text-animation" style="color: var(--theme-color-dark); min-height: 35px;">伺服器準備中...</h2>
+                        <div class="progress-bar-container" style="display:flex; width:100%; gap:10px; align-items:center;">
+                            <div class="progress-bar" style="flex-grow:1; height:14px; background:#eae4dd; border-radius:7px; overflow:hidden;">
+                                <div id="generation-progress-bar-fill" style="width:0%; height:100%; background:var(--theme-color-dark); transition: width 0.3s;"></div>
+                            </div>
+                            <span id="generation-progress-percentage" style="font-weight:bold;">0%</span>
+                        </div>
+                    </div>`;
+                
+                // 啟動無限循環播放動畫，直到畫面被倒數計時切換掉為止
+                const playAnimation = async () => {
+                    let target = document.getElementById("loading-text-animation");
+                    while (target) {
+                        await runOneAnimationCycle(target);
+                        target = document.getElementById("loading-text-animation"); 
+                    }
+                };
+                playAnimation();
+
+            } else {
+                boardElement.innerHTML = `<div class="loading-container"><h2>正在產生題目...</h2></div>`;
+            }
+        }
+    });
 
 
 socket.on('sudoku_dispatch_progress', ({ progress }) => {
@@ -3027,54 +3228,13 @@ socket.on('sudoku_dispatch_progress', ({ progress }) => {
 });
 
 
+    // ✨ 前端只負責接收數字並改變寬度，計算邏輯全交給後端的大腦
     socket.on('sudoku_generation_progress', ({ progress }) => {
-    const percentageSpan = document.getElementById("generation-progress-percentage");
-    const progressBarFill = document.getElementById("generation-progress-bar-fill");
-
-    // 【⭐星探 B 的工作⭐】
-    // 任務：獨立運作，負責更新 5% 到 100% 的進度條。
-    // 把工人回報的 0-100% 進度，等比例縮放到 5-100% 的 95% 區間
-    const displayProgress = 1 + Math.floor(progress * 0.99);
-
-    if (percentageSpan) percentageSpan.textContent = `${displayProgress}%`;
-    if (progressBarFill) progressBarFill.style.width = `${displayProgress}%`;
-    
-    // 拉霸機的觸發邏輯維持不變，由「完成進度」觸發，確保真實性
-    if (!lotteryHasBeenTriggered && currentLotteryResult && progress >= 20) {
-        lotteryHasBeenTriggered = true; 
+        const percentageSpan = document.getElementById("generation-progress-percentage");
+        const progressBarFill = document.getElementById("generation-progress-bar-fill");
         
-        const randomDelay = Math.random() * 10000; 
-        
-        console.log(`[拉霸機] 實際進度已達 ${progress}%，將在 ${randomDelay.toFixed(0)} 毫秒後觸發動畫。`);
-        setTimeout(() => {
-            setupLotteryStage(currentLotteryResult);
-        }, randomDelay);
-    }
-});
-
-
-    socket.on("playerJoinRequest", (data) => {
-      if (iAmHost) {
-        if (data.status) {
-          removeJoinRequestFromUI(data.requesterId);
-        } else {
-          addJoinRequestToUI(data.requesterId, data.playerName, data.timeout);
-        }
-      }
-    });
-    socket.on("updateRoomPlayers", (data) => {
-      if (iAmHost && data.requesterId) {
-        removeJoinRequestFromUI(data.requesterId);
-      }
-      opponentStates = data.players.map(p => ({
-        playerId: p.id,
-        playerName: p.name,
-        progress: -1, // 預設為-1，因為還沒開始遊戲
-        status: p.isHost ? 'host' : 'waiting', // 可以在這裡給予初始狀態
-        finishTime: null
-      }));
-      updatePlayerListUI(data.players);
-      updateOpponentProgressUI(); // 更新進度條 UI
+        if (percentageSpan) percentageSpan.textContent = `${progress}%`;
+        if (progressBarFill) progressBarFill.style.width = `${progress}%`;
     });
 
   socket.on('sudoku_gamePaused', ({ requesterId, playerName }) => {
@@ -3118,21 +3278,27 @@ socket.on('sudoku_dispatch_progress', ({ progress }) => {
 
   } else {
     // 【情況二：暫停是其他玩家發起的（僅限多人模式）】
-    disableGameControls(true); // 禁用所有操作
+    disableGameControls(true, ['game-menu-btn']); // 禁用所有操作
     showCustomAlert(`${playerName || '對手'} 已暫停遊戲。`);
   }
 });
 
-socket.on('sudoku_gameResumed', () => {
-  isPaused = false;
-  if (boardElement && boardElement.classList.contains('is-loading')) {
-    boardElement.classList.remove("is-loading");
-    drawBoard(); // 如果畫面被覆蓋過，重繪棋盤
-  }
-  disableGameControls(false); // 解除所有禁用
-  
-  if (pauseBtn) pauseBtn.textContent = "暫停";
-});
+// ✨ 接收參數 data
+    socket.on('sudoku_gameResumed', (data) => {
+        isPaused = false;
+        if (boardElement && boardElement.classList.contains('is-loading')) {
+            boardElement.classList.remove("is-loading");
+            drawBoard(); 
+        }
+        disableGameControls(false); 
+        
+        if (pauseBtn) pauseBtn.textContent = "暫停";
+
+        // ✨ 如果收到解除暫停的通知，且解除的人不是我，就跳出提示彈窗！
+        if (data && data.resumerId !== myPlayerId) {
+            showCustomAlert("對手已結束暫停，遊戲繼續！");
+        }
+    });
 
  socket.on('sudoku_timerStart', (data) => {
   console.log('[Frontend] 收到 sudoku_timerStart 事件，接收到的 data:', data);
@@ -3211,9 +3377,6 @@ socket.on('sudoku_gameResumed', () => {
         }, 1000);
     }
 });
-
-
-    socket.on("chatMessage", addChatMessageToUI);
 
     setupEventListeners();
 

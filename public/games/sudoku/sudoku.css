@@ -2149,3 +2149,267 @@ input:checked + .slider:before {
   margin-bottom: 25px;
   font-weight: 600;
 }
+
+/* ======================================== */
+/* ✨ 多人連線：房號輸入與創建彈窗 ✨          */
+/* ======================================== */
+#multiplayer-join-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1001; 
+}
+
+#multiplayer-join-modal {
+  background-color: white;
+  padding: 25px 40px;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.25);
+  width: 90%;
+  max-width: 400px;
+}
+
+#multiplayer-join-modal h3 {
+  margin-top: 0;
+  margin-bottom: 25px;
+  font-weight: 600;
+  color: var(--theme-color-dark);
+}
+
+.join-room-section {
+  display: flex;
+  justify-content: center;
+  align-items: stretch; /* 讓子元素同高 */
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.join-room-section input {
+  flex-grow: 1;
+  margin: 0 !important; 
+  padding: 12px 15px;
+  font-size: 1.1em;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  text-transform: uppercase; /* 房號自動轉大寫 */
+}
+
+.join-room-section button {
+  margin: 0 !important;
+  padding: 0 25px;
+  font-size: 1.1em;
+  white-space: nowrap;
+  height: auto; /* 繼承 stretch 的高度 */
+}
+
+.create-room-section button {
+  width: 100%;
+  padding: 15px;
+  font-size: 1.2em;
+  margin: 0 0 15px 0 !important;
+}
+
+#cancel-multiplayer-btn {
+  width: 100%;
+  background-color: #a1a1a1;
+  margin: 0 !important;
+}
+
+#cancel-multiplayer-btn:hover {
+  background-color: #888888;
+}
+
+#multiplayer-join-modal hr {
+    margin: 20px 0;
+    border: 0;
+    border-top: 2px solid #eee;
+}
+
+/* ======================================== */
+/* ✨ 自訂難度滑桿彈窗專屬樣式 ✨          */
+/* ======================================== */
+
+/* 1. 彈窗遮罩與絕對置頂 */
+#custom-difficulty-modal-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 99999; 
+    backdrop-filter: blur(5px); /* 加上一點背景模糊更有質感 */
+}
+
+#custom-difficulty-modal-overlay.hidden {
+    display: none !important;
+}
+
+/* 2. 彈窗白色卡片主體 */
+.custom-modal-content {
+    background: white;
+    padding: 35px 30px;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    width: 90%;
+    max-width: 400px;
+    text-align: center;
+}
+
+.custom-modal-content h2 {
+    color: #4a4a4a;
+    margin: 0 0 25px 0;
+    font-weight: 900;
+}
+
+/* 3. 文字與標籤排版 */
+.slider-section {
+    margin: 25px 0;
+}
+
+.slider-section label {
+    font-weight: bold;
+    display: block;
+    margin-bottom: 15px;
+    font-size: 1.2em;
+    color: #333;
+}
+
+#holes-value-display {
+    color: #e74c3c;
+    font-size: 1.6em;
+    margin: 0 8px;
+}
+
+.diff-text-wrapper {
+    font-size: 0.8em;
+    color: #7f8c8d;
+}
+
+.slider-note {
+    font-size: 0.9em;
+    color: #95a5a6;
+    margin-top: 20px;
+}
+
+/* 4. 🌟 美化醜醜的預設滑桿 */
+input[type=range]#custom-holes-slider {
+    -webkit-appearance: none;
+    width: 100%;
+    background: transparent;
+    margin: 20px 0;
+}
+input[type=range]#custom-holes-slider:focus { outline: none; }
+
+/* 滑桿軌道 */
+input[type=range]#custom-holes-slider::-webkit-slider-runnable-track {
+    width: 100%; height: 10px;
+    cursor: pointer;
+    background: #e6e6e6;
+    border-radius: 5px;
+    border: 1px solid #d1d1d1;
+}
+
+/* 滑桿圓形把手 */
+input[type=range]#custom-holes-slider::-webkit-slider-thumb {
+    border: 3px solid #aa8b19; /* 大地色系外框 */
+    height: 28px; width: 28px;
+    border-radius: 50%;
+    background: #ffffff;
+    cursor: pointer;
+    -webkit-appearance: none;
+    margin-top: -10px; /* 讓把手置中於軌道 */
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    transition: transform 0.1s;
+}
+input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
+    background: #faf8f5;
+    transform: scale(1.1); /* 滑鼠移過去微微放大 */
+}
+
+/* 5. 底部按鈕區 */
+.custom-modal-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 30px;
+}
+
+.custom-modal-actions button {
+    padding: 12px 30px;
+    font-size: 1.1em;
+    border-radius: 8px;
+    cursor: pointer;
+    border: none;
+    font-weight: bold;
+    color: white;
+    transition: background-color 0.2s;
+}
+
+#cancel-custom-diff-btn { background-color: #95a5a6; }
+#cancel-custom-diff-btn:hover { background-color: #7f8c8d; }
+
+#confirm-custom-diff-btn { background-color: #aa8b19; }
+#confirm-custom-diff-btn:hover { background-color: #8c7214; }
+
+/* 結算畫面的退出房間按鈕 */
+#win-modal-exit-room-btn {
+  padding: 12px;
+  font-size: 1rem;
+  font-weight: 500;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  background-color: #95a5a6; /* 灰色 */
+  margin-top: 10px;
+  width: 100%;
+}
+#win-modal-exit-room-btn:hover {
+  background-color: #7f8c8d;
+}
+
+/* ======================================== */
+/* ✨ 多人結算排行榜表格專屬樣式 ✨          */
+/* ======================================== */
+.ranking-table-container {
+    max-height: 40vh; /* 避免超過畫面，啟動滾動條 */
+    overflow-y: auto;
+    margin: 15px 0;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
+}
+.ranking-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: center;
+    font-size: 0.9em;
+}
+.ranking-table th {
+    background-color: var(--theme-color-dark);
+    color: white;
+    padding: 12px 6px;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    white-space: nowrap;
+}
+.ranking-table td {
+    padding: 12px 6px;
+    border-bottom: 1px solid #eee;
+    color: #333;
+    white-space: nowrap;
+}
+.ranking-table tr:last-child td { border-bottom: none; }
+.ranking-table tbody tr:hover { background-color: #fcf9f5; }
+
+#custom-modal-overlay {
+    z-index: 999999 !important; /* 確保大於房號輸入框的 1001 */
+}
