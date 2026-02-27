@@ -2587,12 +2587,12 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
 
     /* 數字鍵盤區 */
     #number-palette {
-        flex: 1 1 auto !important;
+        flex: 0 0 auto !important;     /* ✨ 核心：不強制填滿，由按鈕寬度決定高度 */
         display: grid !important;
         grid-template-columns: repeat(3, 1fr) !important;
-        gap: 5px !important;
-        min-height: 0 !important;
+        gap: 6px !important;           /* 稍微加大間距，看起來更清爽 */
         padding: 0 !important;
+        align-content: start !important; /* 置頂對齊，不平分高度 */
     }
 
     #number-palette .number, 
@@ -2600,9 +2600,16 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
     #number-palette .delete-key {
         padding: 0 !important;
         margin: 0 !important;
-        height: 100% !important; 
+        width: 100% !important;
+        /* ✨ 魔法比例：寬度是 1，高度是 0.85 
+           這會讓按鈕自動根據手機寬度縮放，看起來會扁平精緻很多！ */
+        aspect-ratio: 1 / 0.85 !important; 
+        height: auto !important;         /* ✨ 關鍵：解除原本 100% 的高度封印 */
         min-height: 0 !important;
-        font-size: 1.2rem !important;
+        font-size: 1.15rem !important;   
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
     }
 
     /* 底部按鈕區 */
