@@ -452,10 +452,13 @@ function isBoardFull() {
 
     if (boardElement) {
       boardElement.classList.remove("hidden");
-      // ✨ 修正：移除 position: absolute，改用 flex 均分空間，解決重疊問題
-      // ✨ 修正：放棄 Flexbox 均分，改用「絕對定位」，保證房號永遠在正中央！
+      
+      // ✨ 關鍵修改 1：加上這行，強制棋盤變成彈性佈局，解除 9x9 網格封印
+      boardElement.classList.add("is-loading"); 
+
+      // ✨ 關鍵修改 2：在下方 div 的 style 中，加上了 grid-column: 1 / -1; grid-row: 1 / -1; 確保填滿空間
       let waitingHtml = `
-        <div class="board-waiting-screen" style="position: relative; width: 100%; height: 100%; background-color: #faf8f5; box-sizing: border-box;">
+        <div class="board-waiting-screen" style="position: relative; width: 100%; height: 100%; background-color: #faf8f5; box-sizing: border-box; grid-column: 1 / -1; grid-row: 1 / -1;">
 
           <h2 style="position: absolute; top: 15%; left: 0; width: 100%; margin: 0; color: #2c3e50; font-weight: bold; font-size: clamp(1.2rem, 4vw, 1.5rem); text-align: center;">
             等待其他玩家加入
@@ -483,7 +486,6 @@ function isBoardFull() {
 
       const boardStartBtn = document.getElementById("board-start-game-btn");
       if (boardStartBtn) {
-        // ✨【修復 3：加入滑鼠懸停效果，移上去變亮 #c4ac57，移開變回 #aa8b19】
         boardStartBtn.addEventListener("mouseover", () => {
              if(!boardStartBtn.disabled) boardStartBtn.style.backgroundColor = "#c4ac57";
         });
@@ -496,7 +498,6 @@ function isBoardFull() {
         boardStartBtn.addEventListener("click", async () => {
           const userConfirmed = await showCustomConfirm("開始遊戲？開始後無法再加入新玩家", "確認開始");
           if (userConfirmed) {
-            // ✨ 補上這行，確保按下確認後背景會乾淨地隱藏
             if (appContainer) appContainer.classList.add("hidden"); 
             if (difficultyModalOverlay) difficultyModalOverlay.classList.remove("hidden");
           }
@@ -879,6 +880,7 @@ function isBoardFull() {
   function drawBoard() {
     if (!boardElement || !puzzle || puzzle.length === 0) return;
     boardElement.innerHTML = "";
+    boardElement.classList.remove('is-loading');
     for (let i = 0; i < 9; i++) {
         const rowDiv = document.createElement('div');
         rowDiv.classList.add('row');
@@ -2507,7 +2509,7 @@ function setupEventListeners() {
           socket.emit("sudoku_startGame", {
             roomId: currentGameId,
             difficulty: selectedDifficulty,
-            holes: customHoles === 60 ? 59 : customHoles // 傳遞自訂洞數
+            holes: customHoles
           });
           hideWaitingScreen();
           boardElement.innerHTML = "<h2>正在為所有玩家產生謎題...</h2>";
@@ -2597,7 +2599,7 @@ function setupEventListeners() {
     if (customSlider) {
         customSlider.addEventListener('input', (e) => {
             let val = parseInt(e.target.value);
-            customDisplay.textContent = val === 60 ? '59+' : val;
+            customDisplay.textContent = val;
             if (val < 41) customTextDisplay.textContent = '簡單';
             else if (val < 51) customTextDisplay.textContent = '中等';
             else customTextDisplay.textContent = '困難';
