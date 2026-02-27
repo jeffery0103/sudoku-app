@@ -2758,28 +2758,36 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
         display: none !important;
     }
 
-    /* 2. 顯示懸浮大頭貼按鈕 */
     #mobile-floating-chat-btn {
         display: flex !important;
         position: fixed !important;
-        bottom: 25px !important;
+        /* 預設位置 */
+        bottom: 100px !important; 
         right: 20px !important;
-        width: 55px !important;
-        height: 55px !important;
+        width: 60px !important;
+        height: 60px !important;
         background-color: var(--theme-color-dark) !important;
         color: white !important;
         border-radius: 50% !important;
-        font-size: 26px !important;
+        font-size: 28px !important;
         justify-content: center !important;
         align-items: center !important;
         box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
         z-index: 9999 !important;
-        cursor: pointer !important;
-        transition: transform 0.2s !important;
+        cursor: grab !important;
+        touch-action: none !important; /* 阻止手機原生捲動干擾拖動 */
+        user-select: none !important;
     }
+    
+
+    /* 當正在拖動時的視覺效果 */
     #mobile-floating-chat-btn:active {
-        transform: scale(0.9) !important;
+        cursor: grabbing !important;
+        transform: scale(1.1) !important;
+        transition: transform 0.1s !important;
     }
+
+    
 
     /* 3. 大頭貼的專屬紅點 */
     #mobile-chat-badge {

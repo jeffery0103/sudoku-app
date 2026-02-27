@@ -152,27 +152,29 @@ function isBoardFull() {
   }
 
   function setUIState(state) {
-    if (!inGameControls) inGameControls = document.getElementById('in-game-controls');
-    if (!multiplayerWaitingPanel) multiplayerWaitingPanel = document.getElementById('multiplayer-waiting-panel');
-    
-    inGameControls?.classList.add('hidden');
-    multiplayerWaitingPanel?.classList.add('hidden');
-    if (singlePlayerInfoPanel) singlePlayerInfoPanel.classList.add('hidden');
-    if (multiplayerInfoPanel) multiplayerInfoPanel.classList.add('hidden');
+  if (!inGameControls) inGameControls = document.getElementById('in-game-controls');
+  if (!multiplayerWaitingPanel) multiplayerWaitingPanel = document.getElementById('multiplayer-waiting-panel');
+  
+  inGameControls?.classList.add('hidden');
+  multiplayerWaitingPanel?.classList.add('hidden');
+  if (singlePlayerInfoPanel) singlePlayerInfoPanel.classList.add('hidden');
+  if (multiplayerInfoPanel) multiplayerInfoPanel.classList.add('hidden');
 
-    const mobileFloatingChatBtn = document.getElementById('mobile-floating-chat-btn');
-    if (mobileFloatingChatBtn) mobileFloatingChatBtn.classList.add('hidden');
+  const mobileFloatingChatBtn = document.getElementById('mobile-floating-chat-btn');
+  // 預設先完全隱藏
+  if (mobileFloatingChatBtn) mobileFloatingChatBtn.style.display = 'none';
 
-    if (state === 'waiting_multiplayer') {
-      multiplayerWaitingPanel?.classList.remove('hidden');
-    } else if (state === 'playing_single') {
-      inGameControls?.classList.remove('hidden');
-      singlePlayerInfoPanel?.classList.remove('hidden');
-    } else if (state === 'playing_multiplayer' || state === 'gameOver_multiplayer') {
-      inGameControls?.classList.remove('hidden');
-      multiplayerInfoPanel?.classList.remove('hidden');
-      if (mobileFloatingChatBtn) mobileFloatingChatBtn.classList.remove('hidden'); // ✨ 遊戲中顯示大頭貼
-    }
+  if (state === 'waiting_multiplayer') {
+    multiplayerWaitingPanel?.classList.remove('hidden');
+  } else if (state === 'playing_single') {
+    inGameControls?.classList.remove('hidden');
+    singlePlayerInfoPanel?.classList.remove('hidden');
+  } else if (state === 'playing_multiplayer' || state === 'gameOver_multiplayer') {
+    inGameControls?.classList.remove('hidden');
+    multiplayerInfoPanel?.classList.remove('hidden');
+    // ✨ 只有在「多人連線且遊戲中/結束」才顯示懸浮按鈕
+    if (mobileFloatingChatBtn) mobileFloatingChatBtn.style.display = 'flex';
+  }
     
     const isMultiplayerPlaying = (state === 'playing_multiplayer');
     const isMultiplayerGameOver = (state === 'gameOver_multiplayer');
@@ -3380,22 +3382,66 @@ socket.on('sudoku_dispatch_progress', ({ progress }) => {
     }
 });
 
-    // ✨ Messenger 風格聊天大頭貼邏輯
-    const mobileFloatingChatBtn = document.getElementById('mobile-floating-chat-btn');
-    const inGameChatTabContent = document.getElementById('tab-content-ingame-chat');
+    // ✨ Messenger 風格：可拖曳聊天大頭貼邏輯
+    const floatingBtn = document.getElementById('mobile-floating-chat-btn');
+    const chatTab = document.getElementById('tab-content-ingame-chat');
     
-    if (mobileFloatingChatBtn) {
-        mobileFloatingChatBtn.addEventListener('click', () => {
-            if (inGameChatTabContent) {
-                // 切換顯示/隱藏
-                inGameChatTabContent.classList.toggle('show-floating');
-                
-                // 如果是打開的狀態，清空紅點，並確保視窗滾動到最底
-                if (inGameChatTabContent.classList.contains('show-floating')) {
-                    unreadInGameMessages = 0;
-                    updateInGameChatBadge();
-                    const messagesContainer = document.querySelector('.in-game-chat-messages');
-                    if (messagesContainer) messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    if (floatingBtn) {
+        let isDragging = false;
+        let startX, startY;
+        let initialX, initialY;
+
+        // 監聽觸控開始
+        floatingBtn.addEventListener('touchstart', (e) => {
+            isDragging = false; // 重置拖拽標記
+            const touch = e.touches[0];
+            startX = touch.clientX;
+            startY = touch.clientY;
+            // 取得目前的位移位置
+            const rect = floatingBtn.getBoundingClientRect();
+            initialX = rect.left;
+            initialY = rect.top;
+        }, { passive: true });
+
+        // 監聽觸控移動
+        floatingBtn.addEventListener('touchmove', (e) => {
+            const touch = e.touches[0];
+            const dx = touch.clientX - startX;
+            const dy = touch.clientY - startY;
+
+            // 如果移動距離超過 5px，就判定為正在拖行而非點擊
+            if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+                isDragging = true;
+                // 更新位置
+                floatingBtn.style.left = (initialX + dx) + 'px';
+                floatingBtn.style.top = (initialY + dy) + 'px';
+                floatingBtn.style.bottom = 'auto'; // 移除原本的 bottom 限制
+                floatingBtn.style.right = 'auto';  // 移除原本的 right 限制
+            }
+        }, { passive: false });
+
+        // 監聽觸控結束
+        floatingBtn.addEventListener('touchend', (e) => {
+            if (!isDragging) {
+                // 如果沒有拖動，就執行原本的「點擊」打開聊天室邏輯
+                if (chatTab) {
+                    chatTab.classList.toggle('show-floating');
+                    if (chatTab.classList.contains('show-floating')) {
+                        unreadInGameMessages = 0;
+                        updateInGameChatBadge();
+                        const container = document.querySelector('.in-game-chat-messages');
+                        if (container) container.scrollTop = container.scrollHeight;
+                    }
+                }
+            } else {
+                // 拖動結束，可以加一個吸附邊界的特效（選做）
+                const screenWidth = window.innerWidth;
+                const finalRect = floatingBtn.getBoundingClientRect();
+                // 簡單吸附：靠近哪邊就貼哪邊
+                if (finalRect.left + finalRect.width / 2 < screenWidth / 2) {
+                    floatingBtn.style.left = '10px';
+                } else {
+                    floatingBtn.style.left = (screenWidth - finalRect.width - 10) + 'px';
                 }
             }
         });
