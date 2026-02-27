@@ -2514,7 +2514,7 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
     .controls-wrapper {
         flex: 1 1 50% !important; /* 上下彈性均分一半 */
         width: 100% !important;
-        padding: 12px 15px !important;
+        padding: 4px 15px 12px 15px !important;
         box-sizing: border-box !important;
         display: flex !important;
         flex-direction: column !important;
@@ -2553,6 +2553,7 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
     .control-quadrant h3 {
         margin: 0 0 5px 0 !important;
         padding: 0 0 5px 0 !important;
+        line-height: 1.1 !important;
     }
 
     /* 數字鍵盤區 */

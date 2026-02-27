@@ -797,7 +797,7 @@ function isBoardFull() {
     const timerContainer = document.getElementById('timer-container');
     if (timerContainer) {
         timerContainer.innerHTML = `
-            <span class="timer-label">已用時間：</span>
+            <span class="timer-label">用時：</span>
             <span id="timer-value">00:00:00</span>`;
         
         timerValueElement = document.getElementById('timer-value');
