@@ -398,7 +398,11 @@ function isBoardFull() {
     selectedCell = null;
     lastSelectedCoords = null;
     currentViewedPlayerId = myPlayerId;
-    
+    currentlySpectatingId = null; // 確保清空觀戰目標
+
+    // ✨ 核心修復：強制重置右上角的計時器與房號結構，洗掉觀戰文字！
+    restorePlayerView(); 
+
     if (boardElement) {
       boardElement.innerHTML = '';
       boardElement.classList.remove("is-loading");
@@ -1370,14 +1374,15 @@ function isBoardFull() {
         inGameChatNotificationBadge.classList.add('hidden');
       }
     }
-    // ✨ 同步更新手機版懸浮大頭貼的紅點
+    // ✨ 同步更新手機版懸浮大頭貼的紅點 (使用 setProperty 壓制 CSS)
     const mobileChatBadge = document.getElementById('mobile-chat-badge');
     if (mobileChatBadge) {
       if (unreadInGameMessages > 0) {
         mobileChatBadge.textContent = unreadInGameMessages;
-        mobileChatBadge.classList.remove('hidden');
+        mobileChatBadge.style.setProperty('display', 'flex', 'important');
       } else {
-        mobileChatBadge.classList.add('hidden');
+        mobileChatBadge.textContent = '0';
+        mobileChatBadge.style.setProperty('display', 'none', 'important');
       }
     }
   }
@@ -3437,27 +3442,29 @@ floatingBtn.addEventListener('touchmove', (e) => {
     }
 }, { passive: false });
 
-        // 監聽觸控結束
+        
         // 監聽觸控結束
         floatingBtn.addEventListener('touchend', (e) => {
             if (!isDragging) {
-                // 如果沒有拖動，就執行原本的「點擊」打開聊天室邏輯
                 if (chatTab) {
                     chatTab.classList.toggle('show-floating');
                     if (chatTab.classList.contains('show-floating')) {
                         unreadInGameMessages = 0;
                         updateInGameChatBadge();
                         
-                        // ✨ 1. 強制隱藏大頭貼上的紅點
+                        // ✨ 強制隱藏紅點，並確保數字歸零
                         const badge = document.getElementById('mobile-chat-badge');
-                        if (badge) badge.classList.add('hidden');
+                        if (badge) {
+                            badge.textContent = '0';
+                            badge.style.setProperty('display', 'none', 'important');
+                        }
                         
-                        // ✨ 2. 呼叫自適應魔法，確保鍵盤彈出時尺寸完美
                         if (typeof adjustFloatingChatSize === 'function') {
                             adjustFloatingChatSize();
                         }
                         
                         const container = document.querySelector('.in-game-chat-messages');
+                        if (container) container.scrollTop = container.scrollHeight;
                         if (container) container.scrollTop = container.scrollHeight;
                     }
                 }

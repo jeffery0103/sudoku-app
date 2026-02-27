@@ -2740,11 +2740,12 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
     }
 
     #mobile-floating-chat-btn {
-        display: none;
+        display: none; /* 讓 JS 控制顯示 */
         position: fixed !important;
-        /* 預設位置 */
         bottom: 100px !important; 
-        right: 20px !important;
+        /* ✨ 核心修復：把 right 拿掉，改成 left，將按鈕移到左邊 */
+        left: 20px !important; 
+        right: auto !important;
         width: 60px !important;
         height: 60px !important;
         background-color: var(--theme-color-dark) !important;
@@ -2756,16 +2757,26 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
         box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
         z-index: 9999 !important;
         cursor: grab !important;
-        touch-action: none !important; /* 阻止手機原生捲動干擾拖動 */
+        touch-action: none !important; 
         user-select: none !important;
     }
-    
 
-    /* 當正在拖動時的視覺效果 */
-    #mobile-floating-chat-btn:active {
-        cursor: grabbing !important;
-        transform: scale(1.1) !important;
-        transition: transform 0.1s !important;
+    /* 3. 大頭貼的專屬紅點 */
+    #mobile-chat-badge {
+        position: absolute !important;
+        top: -2px !important;
+        right: -2px !important;
+        background-color: #ff3d50 !important;
+        color: white !important;
+        font-size: 12px !important;
+        font-weight: bold !important;
+        width: 20px !important;
+        height: 20px !important;
+        border-radius: 50% !important;
+        /* ✨ 核心修復：預設改為 none，由 JS 的 setProperty 控制顯示 */
+        display: none !important; 
+        justify-content: center !important;
+        align-items: center !important;
     }
 
     
