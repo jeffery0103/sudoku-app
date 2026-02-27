@@ -2585,14 +2585,16 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
         line-height: 1.1 !important;
     }
 
-    /* 數字鍵盤區 */
+    /* ======================================= */
+    /* ⏪ 恢復版本：數字鍵盤 (穩定高度填滿版) */
+    /* ======================================= */
     #number-palette {
-        flex: 0 0 auto !important;     /* ✨ 核心：不強制填滿，由按鈕寬度決定高度 */
+        flex: 1 1 auto !important;
         display: grid !important;
         grid-template-columns: repeat(3, 1fr) !important;
-        gap: 6px !important;           /* 稍微加大間距，看起來更清爽 */
+        gap: 5px !important;
+        min-height: 0 !important;
         padding: 0 !important;
-        align-content: start !important; /* 置頂對齊，不平分高度 */
     }
 
     #number-palette .number, 
@@ -2600,13 +2602,10 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
     #number-palette .delete-key {
         padding: 0 !important;
         margin: 0 !important;
-        width: 100% !important;
-        /* ✨ 魔法比例：寬度是 1，高度是 0.85 
-           這會讓按鈕自動根據手機寬度縮放，看起來會扁平精緻很多！ */
-        aspect-ratio: 1 / 0.85 !important; 
-        height: auto !important;         /* ✨ 關鍵：解除原本 100% 的高度封印 */
+        /* 恢復使用 100% 高度，確保寬度由 Grid 的 1fr 嚴格控制 */
+        height: 100% !important; 
         min-height: 0 !important;
-        font-size: 1.15rem !important;   
+        font-size: 1.2rem !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
@@ -2766,7 +2765,7 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
     }
 
     #mobile-floating-chat-btn {
-        display: flex !important;
+        display: none;
         position: fixed !important;
         /* 預設位置 */
         bottom: 100px !important; 

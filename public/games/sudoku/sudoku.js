@@ -152,29 +152,43 @@ function isBoardFull() {
   }
 
   function setUIState(state) {
-  if (!inGameControls) inGameControls = document.getElementById('in-game-controls');
-  if (!multiplayerWaitingPanel) multiplayerWaitingPanel = document.getElementById('multiplayer-waiting-panel');
-  
-  inGameControls?.classList.add('hidden');
-  multiplayerWaitingPanel?.classList.add('hidden');
-  if (singlePlayerInfoPanel) singlePlayerInfoPanel.classList.add('hidden');
-  if (multiplayerInfoPanel) multiplayerInfoPanel.classList.add('hidden');
+    if (!inGameControls) inGameControls = document.getElementById('in-game-controls');
+    if (!multiplayerWaitingPanel) multiplayerWaitingPanel = document.getElementById('multiplayer-waiting-panel');
+    
+    // 先把所有東西都藏起來 (包含控制面板與資訊欄)
+    inGameControls?.classList.add('hidden');
+    multiplayerWaitingPanel?.classList.add('hidden');
+    if (singlePlayerInfoPanel) singlePlayerInfoPanel.classList.add('hidden');
+    if (multiplayerInfoPanel) multiplayerInfoPanel.classList.add('hidden');
 
-  const mobileFloatingChatBtn = document.getElementById('mobile-floating-chat-btn');
-  // 預設先完全隱藏
-  if (mobileFloatingChatBtn) mobileFloatingChatBtn.style.display = 'none';
+    // ✨【核心修正】改用 .style.setProperty 直接操作，這能完美壓制 CSS 的 !important
+    const mobileFloatingChatBtn = document.getElementById('mobile-floating-chat-btn');
+  
+  // ✨ 暴力重置：先強制隱藏大頭貼，壓制所有 CSS 權重
+  if (mobileFloatingChatBtn) {
+    mobileFloatingChatBtn.style.setProperty('display', 'none', 'important');
+  }
 
   if (state === 'waiting_multiplayer') {
     multiplayerWaitingPanel?.classList.remove('hidden');
   } else if (state === 'playing_single') {
     inGameControls?.classList.remove('hidden');
     singlePlayerInfoPanel?.classList.remove('hidden');
-  } else if (state === 'playing_multiplayer' || state === 'gameOver_multiplayer') {
+  } else if (state === 'playing_multiplayer') {
+    // ✨ 只有這個狀態才準它出來見客！
     inGameControls?.classList.remove('hidden');
     multiplayerInfoPanel?.classList.remove('hidden');
-    // ✨ 只有在「多人連線且遊戲中/結束」才顯示懸浮按鈕
-    if (mobileFloatingChatBtn) mobileFloatingChatBtn.style.display = 'flex';
-  }
+    if (mobileFloatingChatBtn) {
+      mobileFloatingChatBtn.style.setProperty('display', 'flex', 'important');
+    }
+  } else if (state === 'gameOver_multiplayer') {
+      inGameControls?.classList.remove('hidden');
+      multiplayerInfoPanel?.classList.remove('hidden');
+      // 結算畫面也要隱藏大頭貼，讓玩家專心看排行榜
+      if (mobileFloatingChatBtn) {
+          mobileFloatingChatBtn.style.setProperty('display', 'none', 'important');
+      }
+    }
     
     const isMultiplayerPlaying = (state === 'playing_multiplayer');
     const isMultiplayerGameOver = (state === 'gameOver_multiplayer');
@@ -3403,22 +3417,39 @@ socket.on('sudoku_dispatch_progress', ({ progress }) => {
             initialY = rect.top;
         }, { passive: true });
 
-        // 監聽觸控移動
-        floatingBtn.addEventListener('touchmove', (e) => {
-            const touch = e.touches[0];
-            const dx = touch.clientX - startX;
-            const dy = touch.clientY - startY;
+        // 在 init() 函式的拖曳邏輯中更新 touchmove 部份
+floatingBtn.addEventListener('touchmove', (e) => {
+    const touch = e.touches[0];
+    const dx = touch.clientX - startX;
+    const dy = touch.clientY - startY;
 
-            // 如果移動距離超過 5px，就判定為正在拖行而非點擊
-            if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
-                isDragging = true;
-                // 更新位置
-                floatingBtn.style.left = (initialX + dx) + 'px';
-                floatingBtn.style.top = (initialY + dy) + 'px';
-                floatingBtn.style.bottom = 'auto'; // 移除原本的 bottom 限制
-                floatingBtn.style.right = 'auto';  // 移除原本的 right 限制
-            }
-        }, { passive: false });
+    if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+        isDragging = true;
+        
+        // 1. 計算預計的新位置
+        let newLeft = initialX + dx;
+        let newTop = initialY + dy;
+
+        // 2. 獲取螢幕與按鈕的物理尺寸
+        const btnRect = floatingBtn.getBoundingClientRect();
+        const screenW = window.innerWidth;
+        const screenH = window.innerHeight;
+
+        // 3. ✨ 上下邊界限制：不准超過 0，也不准超過 (螢幕高度 - 按鈕高度)
+        if (newTop < 0) newTop = 0;
+        if (newTop > screenH - btnRect.height) newTop = screenH - btnRect.height;
+
+        // 4. ✨ 左右邊界限制 (順便防滑出螢幕)
+        if (newLeft < 0) newLeft = 0;
+        if (newLeft > screenW - btnRect.width) newLeft = screenW - btnRect.width;
+
+        // 5. 套用位置
+        floatingBtn.style.left = newLeft + 'px';
+        floatingBtn.style.top = newTop + 'px';
+        floatingBtn.style.bottom = 'auto';
+        floatingBtn.style.right = 'auto';
+    }
+}, { passive: false });
 
         // 監聽觸控結束
         floatingBtn.addEventListener('touchend', (e) => {
