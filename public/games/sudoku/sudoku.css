@@ -2418,15 +2418,16 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
 
 
 /* ==========================================================
-   📱 1. 終極手機直向排版：精準 50/50 完美分割
+   📱 1. 終極手機直向排版：懸浮雙卡片完美比例
    ========================================================== */
 @media screen and (max-width: 768px) {
-    /* 1. 徹底歸零所有外層容器的邊距，奪回 100% 的畫面控制權 */
+    /* 1. 恢復外層一點點呼吸空間，讓米色背景露出來 */
     body, html {
         padding: 0 !important;
         margin: 0 !important;
-        overflow: hidden !important; /* 絕對禁止整體畫面滾動 */
+        overflow: hidden !important; 
         height: 100dvh !important;
+        background-color: var(--bg-color-light) !important;
     }
 
     .container, #app-container {
@@ -2436,45 +2437,48 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
         height: 100dvh !important;
         max-width: 100% !important;
         max-height: 100dvh !important;
+        background: transparent !important; /* 確保不遮擋背景 */
         border-radius: 0 !important;
         border: none !important;
         box-shadow: none !important;
     }
 
-    /* 2. 主容器：設定為上下排列，佔滿 100dvh */
+    /* 2. 主容器：設定四周 padding 讓卡片不要貼死螢幕邊緣 */
     .main-container {
         display: flex !important;
         flex-direction: column !important;
         height: 100dvh !important;
         width: 100% !important;
-        gap: 0 !important; 
-        padding: 0 !important;
-        margin: 0 !important;
-        background-color: var(--bg-color-light) !important;
+        gap: 12px !important; /* 兩張白卡片中間的縫隙 */
+        /* ✨ 核心修正：上左右各留 10px，底部留 20px 空白，完美露出米色底！ */
+        padding: 10px 10px 20px 10px !important; 
+        box-sizing: border-box !important;
+        background-color: transparent !important;
     }
 
     /* ======================================= */
-    /* 🎲 上半部：棋盤區 (精準佔用上方 50%) */
+    /* 🎲 上半部：棋盤區 (找回白色獨立卡片！) */
     /* ======================================= */
     .game-wrapper {
-        flex: 0 0 50dvh !important; /* ✨ 核心：強制高度為畫面的一半 */
-        height: 50dvh !important;
+        flex: 1 1 50% !important; /* 上下彈性均分一半 */
         width: 100% !important;
-        padding: 10px 15px !important;
+        padding: 12px !important;
         box-sizing: border-box !important;
         display: flex !important;
         flex-direction: column !important;
         justify-content: center !important;
         align-items: center !important;
-        background-color: transparent !important;
-        box-shadow: none !important;
-        border-radius: 0 !important;
+        /* ✨ 找回白色背景、圓角與陰影，變成獨立卡片 */
+        background-color: white !important; 
+        box-shadow: 0 4px 12px rgba(0,0,0,0.06) !important; 
+        border-radius: 16px !important; 
+        min-height: 0 !important;
     }
 
     .game-main-content {
         width: 100% !important;
         height: 100% !important;
-        max-width: 450px !important; /* 在大手機上不要太寬 */
+        max-width: 450px !important; 
         display: flex !important;
         flex-direction: column !important;
         justify-content: center !important;
@@ -2487,42 +2491,40 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
         margin-bottom: 5px !important;
     }
 
-    /* ✨ 拯救變形的棋盤：強制正方形魔法 */
+    /* ✨ 拯救變形的棋盤：強制正方形，並精算最大高度避免撐破卡片 */
     #game-board {
-        /* 寬度最大為 100%，高度交給 aspect-ratio 自動推算 */
         width: 100% !important;
         height: auto !important;
-        /* 但是寬度絕對不能超過「上半部剩餘的高度」，否則會把下面擠掉 */
-        /* 上半部是 50dvh，扣掉 padding 跟標題大約剩 40dvh */
-        max-width: min(100%, 40dvh) !important; 
-        aspect-ratio: 1 / 1 !important; /* ✨ 強制完美的正方形 */
+        /* 寬度絕對不能超過「上半部一半高度扣掉標題空間」，確保正方形不出界 */
+        max-width: min(100%, calc(50dvh - 75px)) !important; 
+        aspect-ratio: 1 / 1 !important; 
         margin: 0 auto !important; 
         box-sizing: border-box !important;
         border: 3px solid var(--theme-color-dark) !important;
     }
     
-    /* 確保裡面的格子不會被壓扁 */
     .row, .cell {
         box-sizing: border-box !important;
         min-height: 0 !important;
     }
 
     /* ======================================= */
-    /* 🎛️ 下半部：控制區 (精準佔用下方 50%) */
+    /* 🎛️ 下半部：控制區 (獨立白卡片) */
     /* ======================================= */
     .controls-wrapper {
-        flex: 0 0 50dvh !important; /* ✨ 核心：強制高度為畫面的一半 */
-        height: 50dvh !important;
+        flex: 1 1 50% !important; /* 上下彈性均分一半 */
         width: 100% !important;
-        padding: 15px !important;
+        padding: 12px 15px !important;
         box-sizing: border-box !important;
         display: flex !important;
         flex-direction: column !important;
         justify-content: flex-start !important;
         align-items: center !important;
+        /* ✨ 恢復四角圓角，變成獨立卡片 */
         background-color: white !important;
-        border-radius: 20px 20px 0 0 !important; /* ✨ 上方加圓角，看起來像個抽屜面板 */
-        box-shadow: 0 -4px 15px rgba(0,0,0,0.08) !important; /* 上方加一點陰影 */
+        border-radius: 16px !important; 
+        box-shadow: 0 4px 12px rgba(0,0,0,0.06) !important; 
+        min-height: 0 !important;
     }
 
     #in-game-controls {
@@ -2531,11 +2533,11 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
         height: 100% !important;
         display: flex !important;
         flex-direction: column !important;
-        gap: 10px !important;
+        gap: 8px !important;
     }
 
     .upper-controls {
-        flex: 1 1 auto !important; /* 吸收剩下所有的高度 */
+        flex: 1 1 auto !important; 
         display: grid !important;
         grid-template-columns: 1fr 1fr !important;
         gap: 15px !important;
@@ -2553,7 +2555,7 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
         padding: 0 0 5px 0 !important;
     }
 
-    /* 數字鍵盤區：讓按鈕自動塞滿空間，不要爆出去 */
+    /* 數字鍵盤區 */
     #number-palette {
         flex: 1 1 auto !important;
         display: grid !important;
@@ -2568,7 +2570,7 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
     #number-palette .delete-key {
         padding: 0 !important;
         margin: 0 !important;
-        height: 100% !important; /* 讓按鈕高度填滿網格 */
+        height: 100% !important; 
         min-height: 0 !important;
         font-size: 1.2rem !important;
     }
@@ -2586,6 +2588,7 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
     .switch-control {
         padding: 8px 4px !important;
         font-size: 0.9rem !important;
+        margin: 0 !important; /* 清除可能殘留的外距 */
     }
 
     /* ======================================= */
