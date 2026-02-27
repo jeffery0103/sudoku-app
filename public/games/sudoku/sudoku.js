@@ -2936,10 +2936,10 @@ async function handleNumberInput(number) {
 });
 
    document.addEventListener("visibilitychange", () => {
-  // 只有在「視窗被切換」且「遊戲模式為單人」時，才觸發自動暫停
-  if (document.hidden && gameMode === 'single' && !isPaused) { // <-- 增加 !isPaused 判斷更安全
-    pauseGame(true); // <-- 【核心修正】傳入 true，標記為自動暫停
-  }
+    // 只有在「視窗被切換」且「遊戲模式為單人」且「未暫停」且「不在解答畫面」時，才觸發自動暫停
+    if (document.hidden && gameMode === 'single' && !isPaused && !isInSolutionView) { 
+      pauseGame(true); // 自動暫停
+    }
   });
     // 3.4 綁定 Socket.IO 事件監聽器
 

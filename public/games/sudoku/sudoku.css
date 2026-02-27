@@ -2541,6 +2541,23 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
         flex-direction: column !important;
         width: 100% !important;
         height: 100% !important;
+        justify-content: center !important; /* 讓內容垂直置中 */
+        gap: 8px !important; /* 縮小整體元素間距 */
+    }
+
+    #solution-view h3 {
+        font-size: 0.95rem !important;
+        margin: 0 0 5px 0 !important;
+        padding-bottom: 5px !important;
+    }
+
+    #solution-board {
+        width: 100% !important;
+        height: auto !important;
+        aspect-ratio: 1 / 1 !important; /* 強制完美正方形 */
+        /* 絕對不能超過「下半部扣掉標題與按鈕後剩餘的高度 (約 110px)」 */
+        max-width: min(100%, calc(50dvh - 110px)) !important; 
+        margin: 0 auto !important;
     }
 
     .upper-controls {
