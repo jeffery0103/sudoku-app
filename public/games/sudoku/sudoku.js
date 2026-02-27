@@ -302,12 +302,15 @@ function isBoardFull() {
     const playerListContainer = document.querySelector("#multiplayer-waiting-panel .player-list-container");
     if (!playerListContainer || !players || !myPlayerId) return;
 
-    const wasHost = iAmHost; // ✨ 紀錄原本的身分
+    const wasHost = iAmHost; 
     const meInNewList = players.find((p) => p.id === myPlayerId);
     iAmHost = meInNewList ? meInNewList.isHost : false;
 
-    // ✨ 如果從「挑戰者」晉升為「房主」，重新繪製畫面以產生「開始遊戲」按鈕！
-    if (!wasHost && iAmHost && currentGameId) {
+    // ✨ 核心修復 2：加上安全鎖，只有在「大廳等待」時，晉升房主才需要重繪等待畫面！
+    const waitingPanel = document.getElementById('multiplayer-waiting-panel');
+    const isLobby = waitingPanel && !waitingPanel.classList.contains('hidden');
+    
+    if (!wasHost && iAmHost && currentGameId && isLobby) {
         showWaitingScreen(currentGameId);
     }
 
@@ -398,10 +401,27 @@ function isBoardFull() {
     selectedCell = null;
     lastSelectedCoords = null;
     currentViewedPlayerId = myPlayerId;
-    currentlySpectatingId = null; // 確保清空觀戰目標
+    currentlySpectatingId = null;
 
-    // ✨ 核心修復：強制重置右上角的計時器與房號結構，洗掉觀戰文字！
     restorePlayerView(); 
+
+    // ✨ 核心修復 1：強制重置聊天大頭貼與對話紀錄
+    const mobileFloatingChatBtn = document.getElementById('mobile-floating-chat-btn');
+    if (mobileFloatingChatBtn) {
+      mobileFloatingChatBtn.style.setProperty('display', 'none', 'important');
+    }
+    const inGameChatTabContent = document.getElementById('tab-content-ingame-chat');
+    if (inGameChatTabContent) {
+      inGameChatTabContent.classList.remove('show-floating');
+    }
+    const badge = document.getElementById('mobile-chat-badge');
+    if (badge) {
+      badge.textContent = '0';
+      badge.style.setProperty('display', 'none', 'important');
+    }
+    unreadInGameMessages = 0;
+    if (inGameChatNotificationBadge) inGameChatNotificationBadge.classList.add('hidden');
+    if (inGameChatMessages) inGameChatMessages.innerHTML = ''; // 清空聊天紀錄
 
     if (boardElement) {
       boardElement.innerHTML = '';
@@ -419,7 +439,6 @@ function isBoardFull() {
     if (infoHintCount) infoHintCount.textContent = "0";
     if (infoValidateCount) infoValidateCount.textContent = "0";
     if (opponentProgressContainer) opponentProgressContainer.innerHTML = '';
-    if (inGameChatMessages) inGameChatMessages.innerHTML = '';
     if (multiplayerGameInfoContent) multiplayerGameInfoContent.innerHTML = '';
 
     updateUndoButtonState();
@@ -3409,40 +3428,40 @@ socket.on('sudoku_dispatch_progress', ({ progress }) => {
         }, { passive: true });
 
         // 在 init() 函式的拖曳邏輯中更新 touchmove 部份
-floatingBtn.addEventListener('touchmove', (e) => {
-    const touch = e.touches[0];
-    const dx = touch.clientX - startX;
-    const dy = touch.clientY - startY;
+// 監聽觸控移動
+        floatingBtn.addEventListener('touchmove', (e) => {
+            const touch = e.touches[0];
+            const dx = touch.clientX - startX;
+            const dy = touch.clientY - startY;
 
-    if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
-        isDragging = true;
-        
-        // 1. 計算預計的新位置
-        let newLeft = initialX + dx;
-        let newTop = initialY + dy;
+            if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+                isDragging = true;
+                
+                // 1. 計算預計的新位置
+                let newLeft = initialX + dx;
+                let newTop = initialY + dy;
 
-        // 2. 獲取螢幕與按鈕的物理尺寸
-        const btnRect = floatingBtn.getBoundingClientRect();
-        const screenW = window.innerWidth;
-        const screenH = window.innerHeight;
+                // 2. 獲取螢幕與按鈕的物理尺寸
+                const btnRect = floatingBtn.getBoundingClientRect();
+                const screenW = window.innerWidth;
+                const screenH = window.innerHeight;
 
-        // 3. ✨ 上下邊界限制：不准超過 0，也不准超過 (螢幕高度 - 按鈕高度)
-        if (newTop < 0) newTop = 0;
-        if (newTop > screenH - btnRect.height) newTop = screenH - btnRect.height;
+                // 3. 上下邊界限制：不准超過 0，也不准超過 (螢幕高度 - 按鈕高度)
+                if (newTop < 0) newTop = 0;
+                if (newTop > screenH - btnRect.height) newTop = screenH - btnRect.height;
 
-        // 4. ✨ 左右邊界限制 (順便防滑出螢幕)
-        if (newLeft < 0) newLeft = 0;
-        if (newLeft > screenW - btnRect.width) newLeft = screenW - btnRect.width;
+                // 4. 左右邊界限制 (順便防滑出螢幕)
+                if (newLeft < 0) newLeft = 0;
+                if (newLeft > screenW - btnRect.width) newLeft = screenW - btnRect.width;
 
-        // 5. 套用位置
-        floatingBtn.style.left = newLeft + 'px';
-        floatingBtn.style.top = newTop + 'px';
-        floatingBtn.style.bottom = 'auto';
-        floatingBtn.style.right = 'auto';
-    }
-}, { passive: false });
+                // 5. 套用位置 (✨ 核心修正：使用 setProperty 加上 important 壓制 CSS)
+                floatingBtn.style.setProperty('left', newLeft + 'px', 'important');
+                floatingBtn.style.setProperty('top', newTop + 'px', 'important');
+                floatingBtn.style.setProperty('bottom', 'auto', 'important');
+                floatingBtn.style.setProperty('right', 'auto', 'important');
+            }
+        }, { passive: false });
 
-        
         // 監聽觸控結束
         floatingBtn.addEventListener('touchend', (e) => {
             if (!isDragging) {
@@ -3452,7 +3471,7 @@ floatingBtn.addEventListener('touchmove', (e) => {
                         unreadInGameMessages = 0;
                         updateInGameChatBadge();
                         
-                        // ✨ 強制隱藏紅點，並確保數字歸零
+                        // 強制隱藏紅點，並確保數字歸零
                         const badge = document.getElementById('mobile-chat-badge');
                         if (badge) {
                             badge.textContent = '0';
@@ -3465,18 +3484,18 @@ floatingBtn.addEventListener('touchmove', (e) => {
                         
                         const container = document.querySelector('.in-game-chat-messages');
                         if (container) container.scrollTop = container.scrollHeight;
-                        if (container) container.scrollTop = container.scrollHeight;
                     }
                 }
             } else {
-                // 拖動結束，可以加一個吸附邊界的特效（選做）
+                // 拖動結束，吸附邊界特效 (✨ 核心修正：同樣使用 setProperty 加上 important)
                 const screenWidth = window.innerWidth;
                 const finalRect = floatingBtn.getBoundingClientRect();
+                
                 // 簡單吸附：靠近哪邊就貼哪邊
                 if (finalRect.left + finalRect.width / 2 < screenWidth / 2) {
-                    floatingBtn.style.left = '10px';
+                    floatingBtn.style.setProperty('left', '10px', 'important');
                 } else {
-                    floatingBtn.style.left = (screenWidth - finalRect.width - 10) + 'px';
+                    floatingBtn.style.setProperty('left', (screenWidth - finalRect.width - 10) + 'px', 'important');
                 }
             }
         });
