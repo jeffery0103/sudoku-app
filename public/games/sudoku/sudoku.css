@@ -2658,7 +2658,7 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
     }
 
     .pencil-mark {
-        font-size: 0.28em !important; /* 手機小格子專屬縮小比例 */
+        font-size: 0.25em !important; /* 手機小格子專屬縮小比例 */
         width: 100% !important;
         height: 100% !important;
         margin: 0 !important;
