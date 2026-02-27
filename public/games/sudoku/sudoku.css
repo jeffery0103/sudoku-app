@@ -2585,30 +2585,6 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
         line-height: 1.1 !important;
     }
 
-    /* ======================================= */
-    /* ⏪ 恢復版本：數字鍵盤 (穩定高度填滿版) */
-    /* ======================================= */
-    #number-palette {
-        flex: 0 0 auto !important; 
-        display: grid !important;
-        grid-template-columns: repeat(3, 1fr) !important;
-        gap: 4px !important;
-        padding: 0 !important;
-        /* ✨ 限制整體高度，防止擠壓到底部按鈕 */
-        max-height: 180px !important; 
-    }
-
-    #number-palette .number, 
-    #number-palette .control-key, 
-    #number-palette .delete-key {
-        padding: 0 !important;
-        margin: 0 !important;
-        /* ✨ 使用 aspect-ratio 搭配高度限制，既能縮小又不撐開寬度 */
-        aspect-ratio: 1 / 0.7 !important; 
-        height: auto !important;
-        max-height: 42px !important; 
-        font-size: 1.1rem !important;
-    }
 
     /* 底部按鈕區 */
     .lower-controls {
@@ -2848,6 +2824,87 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
     .in-game-chat-messages .sender-name {
         font-size: 0.75rem !important;
         margin-bottom: 2px !important;
+    }
+
+    /* ======================================= */
+    /* ✨ 14. 終極液態鍵盤：完美均分不溢出 */
+    /* ======================================= */
+
+    /* 1. 鎖定雙邊標題高度，確保左右黑線完美水平對齊 */
+    #quadrant-numbers h3, 
+    #single-player-info h3, 
+    .in-game-tabs-container {
+        height: 38px !important;
+        min-height: 38px !important;
+        margin: 0 0 10px 0 !important;
+        padding: 0 !important;
+        border-bottom: 1px solid var(--border-color) !important;
+        box-sizing: border-box !important;
+        display: flex !important;
+        align-items: center !important;
+    }
+
+    #quadrant-numbers h3 {
+        justify-content: center !important; 
+    }
+
+    /* 2. 上方控制區：嚴格 50/50 限制，絕對不准超出螢幕 */
+    .upper-controls {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 10px !important; /* 稍微縮小兩邊間距，爭取空間 */
+        width: 100% !important;
+        min-height: 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    /* 3. 左右區塊：加上最強防爆指令 min-width: 0，強迫內容配合網格縮小 */
+    .control-quadrant {
+        min-width: 0 !important; 
+        display: flex !important;
+        flex-direction: column !important;
+        height: 100% !important;
+    }
+
+    /* 4. 數字鍵盤容器：解除所有高度封印，填滿剩餘空間，切成 4 等分 */
+    #number-palette {
+        flex: 1 1 100% !important; 
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        grid-template-rows: repeat(4, 1fr) !important; /* 強制均分 4 行高度 */
+        gap: 5px !important;
+        padding: 0 !important;
+        min-height: 0 !important; 
+        min-width: 0 !important;  
+        height: 100% !important; 
+        max-height: none !important; /* 移除以前寫死的高度限制 */
+    }
+
+    /* 5. 鍵盤按鈕本身：完全液態化，字體動態縮放 */
+    #number-palette .number, 
+    #number-palette .control-key, 
+    #number-palette .delete-key {
+        width: 100% !important;
+        height: 100% !important;
+        min-width: 0 !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        aspect-ratio: auto !important; /* 徹底廢除固定的長寬比 */
+        
+        /* ✨ 魔法：字體會隨螢幕寬度縮放，最小 0.8rem，最大 1.15rem */
+        font-size: clamp(0.8rem, 3.5vw, 1.15rem) !important; 
+        
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Undo / Redo 字體進一步保護，防止單字太長撐破小螢幕 */
+    #undo-btn span, #redo-btn span {
+        font-size: clamp(0.7rem, 3vw, 0.95rem) !important;
+        letter-spacing: -0.5px !important;
     }
 }
 

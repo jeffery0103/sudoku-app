@@ -3438,6 +3438,7 @@ floatingBtn.addEventListener('touchmove', (e) => {
 }, { passive: false });
 
         // 監聽觸控結束
+        // 監聽觸控結束
         floatingBtn.addEventListener('touchend', (e) => {
             if (!isDragging) {
                 // 如果沒有拖動，就執行原本的「點擊」打開聊天室邏輯
@@ -3446,6 +3447,16 @@ floatingBtn.addEventListener('touchmove', (e) => {
                     if (chatTab.classList.contains('show-floating')) {
                         unreadInGameMessages = 0;
                         updateInGameChatBadge();
+                        
+                        // ✨ 1. 強制隱藏大頭貼上的紅點
+                        const badge = document.getElementById('mobile-chat-badge');
+                        if (badge) badge.classList.add('hidden');
+                        
+                        // ✨ 2. 呼叫自適應魔法，確保鍵盤彈出時尺寸完美
+                        if (typeof adjustFloatingChatSize === 'function') {
+                            adjustFloatingChatSize();
+                        }
+                        
                         const container = document.querySelector('.in-game-chat-messages');
                         if (container) container.scrollTop = container.scrollHeight;
                     }
@@ -3462,6 +3473,43 @@ floatingBtn.addEventListener('touchmove', (e) => {
                 }
             }
         });
+    }
+
+    // ==========================================
+    // ✨ 終極防護：虛擬鍵盤自適應魔法 (Visual Viewport)
+    // ==========================================
+    function adjustFloatingChatSize() {
+        const chatWindow = document.getElementById('tab-content-ingame-chat');
+        if (!chatWindow || !chatWindow.classList.contains('show-floating')) return;
+
+        if (window.visualViewport) {
+            const vv = window.visualViewport;
+            // 判斷鍵盤是否開啟：如果真實可視高度小於螢幕物理高度的 85%，代表鍵盤出來了
+            const isKeyboardOpen = vv.height < window.innerHeight * 0.85; 
+
+            // 1. 動態計算頂部位置 (解決 iOS 整個畫面被往上推的問題)
+            chatWindow.style.setProperty('top', (vv.offsetTop + 10) + 'px', 'important');
+            
+            if (isKeyboardOpen) {
+                // 2. 鍵盤彈出時：強制聊天室高度等於「真實可視高度 - 20px 縫隙」
+                chatWindow.style.setProperty('height', (vv.height - 20) + 'px', 'important');
+                chatWindow.style.setProperty('bottom', 'auto', 'important');
+            } else {
+                // 3. 鍵盤收起時：恢復原本的設計，避開底部的遊戲按鈕
+                chatWindow.style.setProperty('height', 'auto', 'important');
+                chatWindow.style.setProperty('bottom', '85px', 'important');
+            }
+
+            // 確保每次改變大小時，訊息都能滾動到最底下的最新一則
+            const msgBox = document.querySelector('.in-game-chat-messages');
+            if (msgBox) msgBox.scrollTop = msgBox.scrollHeight;
+        }
+    }
+
+    // 監聽鍵盤的彈出(resize)與畫面的推擠(scroll)
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', adjustFloatingChatSize);
+        window.visualViewport.addEventListener('scroll', adjustFloatingChatSize);
     }
 
     setupEventListeners();
