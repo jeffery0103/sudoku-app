@@ -2589,12 +2589,13 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
     /* ⏪ 恢復版本：數字鍵盤 (穩定高度填滿版) */
     /* ======================================= */
     #number-palette {
-        flex: 1 1 auto !important;
+        flex: 0 0 auto !important; 
         display: grid !important;
         grid-template-columns: repeat(3, 1fr) !important;
-        gap: 5px !important;
-        min-height: 0 !important;
+        gap: 4px !important;
         padding: 0 !important;
+        /* ✨ 限制整體高度，防止擠壓到底部按鈕 */
+        max-height: 180px !important; 
     }
 
     #number-palette .number, 
@@ -2602,13 +2603,11 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
     #number-palette .delete-key {
         padding: 0 !important;
         margin: 0 !important;
-        /* 恢復使用 100% 高度，確保寬度由 Grid 的 1fr 嚴格控制 */
-        height: 100% !important; 
-        min-height: 0 !important;
-        font-size: 1.2rem !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
+        /* ✨ 使用 aspect-ratio 搭配高度限制，既能縮小又不撐開寬度 */
+        aspect-ratio: 1 / 0.7 !important; 
+        height: auto !important;
+        max-height: 42px !important; 
+        font-size: 1.1rem !important;
     }
 
     /* 底部按鈕區 */
@@ -2815,19 +2814,20 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
     /* 4. 把原本的聊天室內容，變成漂亮的懸浮對話框 */
     #tab-content-ingame-chat {
         position: fixed !important;
-        bottom: 90px !important; /* 浮在按鈕上方 */
-        right: 20px !important;
-        width: calc(100vw - 40px) !important;
-        max-width: 350px !important;
-        height: 50vh !important; /* 佔畫面一半高度，打字超方便 */
+        /* ✨ 關鍵：上下左右留 10px 縫隙，看起來像浮在上面，但佔滿剩餘空間 */
+        top: 10px !important; 
+        bottom: 85px !important; 
+        left: 10px !important;
+        right: 10px !important;
+        width: auto !important;
+        height: auto !important; 
+        max-width: none !important;
         background-color: white !important;
         border-radius: 16px !important;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important;
         z-index: 9998 !important;
-        padding: 12px !important;
-        display: none !important; /* 預設隱藏 */
+        display: none !important; 
         flex-direction: column !important;
-        border: 1px solid var(--border-color) !important;
+        box-shadow: 0 0 20px rgba(0,0,0,0.2) !important;
     }
 
     /* 透過 JS 加上 class 來彈出對話框 */

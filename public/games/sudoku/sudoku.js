@@ -155,41 +155,38 @@ function isBoardFull() {
     if (!inGameControls) inGameControls = document.getElementById('in-game-controls');
     if (!multiplayerWaitingPanel) multiplayerWaitingPanel = document.getElementById('multiplayer-waiting-panel');
     
-    // 先把所有東西都藏起來 (包含控制面板與資訊欄)
+    // 1. 先把所有面板隱藏
     inGameControls?.classList.add('hidden');
     multiplayerWaitingPanel?.classList.add('hidden');
     if (singlePlayerInfoPanel) singlePlayerInfoPanel.classList.add('hidden');
     if (multiplayerInfoPanel) multiplayerInfoPanel.classList.add('hidden');
 
-    // ✨【核心修正】改用 .style.setProperty 直接操作，這能完美壓制 CSS 的 !important
+    // 2. 暴力重置大頭貼：預設一律隱藏，壓制所有 CSS 權重
     const mobileFloatingChatBtn = document.getElementById('mobile-floating-chat-btn');
-  
-  // ✨ 暴力重置：先強制隱藏大頭貼，壓制所有 CSS 權重
-  if (mobileFloatingChatBtn) {
-    mobileFloatingChatBtn.style.setProperty('display', 'none', 'important');
-  }
-
-  if (state === 'waiting_multiplayer') {
-    multiplayerWaitingPanel?.classList.remove('hidden');
-  } else if (state === 'playing_single') {
-    inGameControls?.classList.remove('hidden');
-    singlePlayerInfoPanel?.classList.remove('hidden');
-  } else if (state === 'playing_multiplayer') {
-    // ✨ 只有這個狀態才準它出來見客！
-    inGameControls?.classList.remove('hidden');
-    multiplayerInfoPanel?.classList.remove('hidden');
     if (mobileFloatingChatBtn) {
-      mobileFloatingChatBtn.style.setProperty('display', 'flex', 'important');
+      mobileFloatingChatBtn.style.setProperty('display', 'none', 'important');
     }
-  } else if (state === 'gameOver_multiplayer') {
+
+    // 3. 根據狀態顯示對應內容
+    if (state === 'waiting_multiplayer') {
+      multiplayerWaitingPanel?.classList.remove('hidden');
+    } else if (state === 'playing_single') {
+      inGameControls?.classList.remove('hidden');
+      singlePlayerInfoPanel?.classList.remove('hidden');
+    } else if (state === 'playing_multiplayer') {
       inGameControls?.classList.remove('hidden');
       multiplayerInfoPanel?.classList.remove('hidden');
-      // 結算畫面也要隱藏大頭貼，讓玩家專心看排行榜
+      // ✨ 只有在「多人遊戲進行中」才顯示大頭貼
       if (mobileFloatingChatBtn) {
-          mobileFloatingChatBtn.style.setProperty('display', 'none', 'important');
+        mobileFloatingChatBtn.style.setProperty('display', 'flex', 'important');
       }
+    } else if (state === 'gameOver_multiplayer') {
+      inGameControls?.classList.remove('hidden');
+      multiplayerInfoPanel?.classList.remove('hidden');
+      // 結算畫面自動隱藏大頭貼，確保不遮擋排行榜
     }
     
+    // 4. 更新選單按鈕文字與顯示邏輯
     const isMultiplayerPlaying = (state === 'playing_multiplayer');
     const isMultiplayerGameOver = (state === 'gameOver_multiplayer');
 
@@ -428,43 +425,32 @@ function isBoardFull() {
 
   function showWaitingScreen(roomIdOrText) {
     setUIState("waiting_multiplayer");
-    
-    // 確保整個遊戲容器是顯示的
     if (appContainer) appContainer.classList.remove("hidden");
 
     if (boardElement) {
       boardElement.classList.remove("hidden");
-      
-      // ✨【修復 1：移除寫死的高度，改用 height: 100% 讓它自動貼合完美正方形棋盤】
+      // ✨ 修正：移除 position: absolute，改用 flex 均分空間，解決重疊問題
       let waitingHtml = `
-        <div class="board-waiting-screen" style="width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; background-color: #faf8f5; box-sizing: border-box;">
-          <h2 style="color: #2c3e50; margin-bottom: 10px; font-weight: bold; font-size: 1.3em;">等待其他玩家加入</h2>
-      `;
+        <div class="board-waiting-screen" style="width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-around; align-items: center; background-color: #faf8f5; padding: 20px; box-sizing: border-box;">
+          <h2 style="color: #2c3e50; margin: 0; font-weight: bold; font-size: 1.2em;">等待其他玩家加入</h2>
+          
+          <div style="text-align: center;">
+            ${(roomIdOrText && roomIdOrText.length <= 6 && !roomIdOrText.includes("正在")) 
+              ? `<h1 style="font-size: clamp(2.5em, 8vw, 3.5em); letter-spacing: 5px; color: #e74c3c; margin: 0; font-weight: 900; text-shadow: 2px 2px 4px rgba(0,0,0,0.1);">${roomIdOrText}</h1>` 
+              : `<p style="font-size: 1.1em; color: #555; margin: 0;">${roomIdOrText || "請稍候..."}</p>`}
+          </div>
 
-      // 微調房號字體大小，避免在小手機上超出邊界
-      if (roomIdOrText && roomIdOrText.length <= 6 && !roomIdOrText.includes("正在") && !roomIdOrText.includes("等待")) {
-          waitingHtml += `<h1 style="font-size: 3.2em; letter-spacing: 5px; color: #e74c3c; margin: 0; font-weight: 900; text-shadow: 2px 2px 4px rgba(0,0,0,0.15);">${roomIdOrText}</h1>`;
-      } else {
-          waitingHtml += `<p style="font-size: 1.1em; color: #555; padding: 0 10px; text-align: center;">${roomIdOrText || "請稍候..."}</p>`;
-      }
-
-      // ✨【修復 2：將按鈕和文字的 bottom 距離縮小，避免在小螢幕被切斷】
-      if (iAmHost) {
-          waitingHtml += `
-              <button id="board-start-game-btn" disabled style="position: absolute; bottom: 15px; padding: 10px 30px; font-size: 1.1em; font-weight: bold; background-color: #95a5a6; color: white; border: 2px solid #7f8c8d; border-radius: 10px; cursor: not-allowed; box-shadow: 0 4px 8px rgba(0,0,0,0.2); transition: all 0.2s;">
+          <div id="board-action-area" style="width: 100%; display: flex; justify-content: center;">
+            ${iAmHost ? `
+              <button id="board-start-game-btn" disabled style="padding: 12px 30px; font-size: 1.1em; font-weight: bold; background-color: #95a5a6; color: white; border: none; border-radius: 10px; cursor: not-allowed; transition: all 0.2s;">
                   等待對手加入...
               </button>
-          `;
-      } else {
-          waitingHtml += `
-              <p style="position: absolute; bottom: 15px; font-size: 1.1em; color: #7f8c8d; font-weight: bold; margin: 0; width: 100%; text-align: center;">
-                  等待房主開始遊戲...
-              </p>
-          `;
-      }
-
-      waitingHtml += `</div>`;
-      
+            ` : `
+              <p style="font-size: 1.1em; color: #7f8c8d; font-weight: bold; margin: 0;">等待房主開始遊戲...</p>
+            `}
+          </div>
+        </div>
+      `;
       boardElement.innerHTML = waitingHtml;
 
       const boardStartBtn = document.getElementById("board-start-game-btn");
