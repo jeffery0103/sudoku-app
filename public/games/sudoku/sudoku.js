@@ -453,25 +453,30 @@ function isBoardFull() {
     if (boardElement) {
       boardElement.classList.remove("hidden");
       // ✨ 修正：移除 position: absolute，改用 flex 均分空間，解決重疊問題
+      // ✨ 修正：放棄 Flexbox 均分，改用「絕對定位」，保證房號永遠在正中央！
       let waitingHtml = `
-        <div class="board-waiting-screen" style="width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-around; align-items: center; background-color: #faf8f5; padding: 20px; box-sizing: border-box;">
-          <h2 style="color: #2c3e50; margin: 0; font-weight: bold; font-size: 1.2em;">等待其他玩家加入</h2>
-          
-          <div style="text-align: center;">
+        <div class="board-waiting-screen" style="position: relative; width: 100%; height: 100%; background-color: #faf8f5; box-sizing: border-box;">
+
+          <h2 style="position: absolute; top: 15%; left: 0; width: 100%; margin: 0; color: #2c3e50; font-weight: bold; font-size: clamp(1.2rem, 4vw, 1.5rem); text-align: center;">
+            等待其他玩家加入
+          </h2>
+
+          <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; width: 100%;">
             ${(roomIdOrText && roomIdOrText.length <= 6 && !roomIdOrText.includes("正在")) 
-              ? `<h1 style="font-size: clamp(2.5em, 8vw, 3.5em); letter-spacing: 5px; color: #e74c3c; margin: 0; font-weight: 900; text-shadow: 2px 2px 4px rgba(0,0,0,0.1);">${roomIdOrText}</h1>` 
-              : `<p style="font-size: 1.1em; color: #555; margin: 0;">${roomIdOrText || "請稍候..."}</p>`}
+              ? `<h1 style="font-size: clamp(3rem, 12vw, 4.5rem); letter-spacing: 5px; color: #e74c3c; margin: 0; font-weight: 900; text-shadow: 2px 2px 4px rgba(0,0,0,0.1); line-height: 1;">${roomIdOrText}</h1>` 
+              : `<p style="font-size: 1.2em; color: #555; margin: 0; font-weight: bold;">${roomIdOrText || "請稍候..."}</p>`}
           </div>
 
-          <div id="board-action-area" style="width: 100%; display: flex; justify-content: center;">
+          <div id="board-action-area" style="position: absolute; bottom: 15%; left: 0; width: 100%; display: flex; justify-content: center; padding: 0 15px; box-sizing: border-box;">
             ${iAmHost ? `
-              <button id="board-start-game-btn" disabled style="padding: 12px 30px; font-size: 1.1em; font-weight: bold; background-color: #95a5a6; color: white; border: none; border-radius: 10px; cursor: not-allowed; transition: all 0.2s;">
+              <button id="board-start-game-btn" disabled style="padding: 12px 0; width: 80%; max-width: 250px; font-size: clamp(1rem, 3vw, 1.1rem); font-weight: bold; background-color: #95a5a6; color: white; border: none; border-radius: 10px; cursor: not-allowed; transition: all 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                   等待對手加入...
               </button>
             ` : `
-              <p style="font-size: 1.1em; color: #7f8c8d; font-weight: bold; margin: 0;">等待房主開始遊戲...</p>
+              <p style="font-size: clamp(1rem, 3vw, 1.1rem); color: #7f8c8d; font-weight: bold; margin: 0; text-align: center;">等待房主開始遊戲...</p>
             `}
           </div>
+
         </div>
       `;
       boardElement.innerHTML = waitingHtml;
