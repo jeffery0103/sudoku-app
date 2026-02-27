@@ -160,6 +160,9 @@ function isBoardFull() {
     if (singlePlayerInfoPanel) singlePlayerInfoPanel.classList.add('hidden');
     if (multiplayerInfoPanel) multiplayerInfoPanel.classList.add('hidden');
 
+    const mobileFloatingChatBtn = document.getElementById('mobile-floating-chat-btn');
+    if (mobileFloatingChatBtn) mobileFloatingChatBtn.classList.add('hidden');
+
     if (state === 'waiting_multiplayer') {
       multiplayerWaitingPanel?.classList.remove('hidden');
     } else if (state === 'playing_single') {
@@ -168,6 +171,7 @@ function isBoardFull() {
     } else if (state === 'playing_multiplayer' || state === 'gameOver_multiplayer') {
       inGameControls?.classList.remove('hidden');
       multiplayerInfoPanel?.classList.remove('hidden');
+      if (mobileFloatingChatBtn) mobileFloatingChatBtn.classList.remove('hidden'); // ✨ 遊戲中顯示大頭貼
     }
     
     const isMultiplayerPlaying = (state === 'playing_multiplayer');
@@ -180,11 +184,9 @@ function isBoardFull() {
         menuRestartBtn.textContent = isMultiplayerPlaying ? "投降" : "重新開始本局";
       }
     }
-    
     if (menuNewGameBtn) {
       menuNewGameBtn.style.display = (isMultiplayerPlaying || isMultiplayerGameOver) ? 'none' : 'block';
     }
-    
   }
 
   function initializeTabs() {
@@ -417,30 +419,29 @@ function isBoardFull() {
     if (boardElement) {
       boardElement.classList.remove("hidden");
       
-      // ✨【修復 1：加上 aspect-ratio: 1 / 1 確保棋盤維持完美的正方形】
+      // ✨【修復 1：移除寫死的高度，改用 height: 100% 讓它自動貼合完美正方形棋盤】
       let waitingHtml = `
-        <div class="board-waiting-screen" style="width: 100%; aspect-ratio: 1 / 1; min-height: 350px; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; background-color: #faf8f5;">
-          <h2 style="color: #2c3e50; margin-bottom: 20px; font-weight: bold;">等待其他玩家加入</h2>
+        <div class="board-waiting-screen" style="width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; background-color: #faf8f5; box-sizing: border-box;">
+          <h2 style="color: #2c3e50; margin-bottom: 10px; font-weight: bold; font-size: 1.3em;">等待其他玩家加入</h2>
       `;
 
-      // 房號字體稍微加大並增加陰影
+      // 微調房號字體大小，避免在小手機上超出邊界
       if (roomIdOrText && roomIdOrText.length <= 6 && !roomIdOrText.includes("正在") && !roomIdOrText.includes("等待")) {
-          waitingHtml += `<h1 style="font-size: 4em; letter-spacing: 8px; color: #e74c3c; margin: 0; font-weight: 900; text-shadow: 2px 2px 4px rgba(0,0,0,0.15);">${roomIdOrText}</h1>`;
+          waitingHtml += `<h1 style="font-size: 3.2em; letter-spacing: 5px; color: #e74c3c; margin: 0; font-weight: 900; text-shadow: 2px 2px 4px rgba(0,0,0,0.15);">${roomIdOrText}</h1>`;
       } else {
-          waitingHtml += `<p style="font-size: 1.3em; color: #555;">${roomIdOrText || "請稍候..."}</p>`;
+          waitingHtml += `<p style="font-size: 1.1em; color: #555; padding: 0 10px; text-align: center;">${roomIdOrText || "請稍候..."}</p>`;
       }
 
-      // ✨【修復 2：大地色按鈕，初始顏色深一點 #aa8b19】
+      // ✨【修復 2：將按鈕和文字的 bottom 距離縮小，避免在小螢幕被切斷】
       if (iAmHost) {
-          // ✨【修正】預設直接設為 disabled (禁用)、灰色 (#95a5a6)、文字為等待加入
           waitingHtml += `
-              <button id="board-start-game-btn" disabled style="position: absolute; bottom: 30px; padding: 15px 50px; font-size: 1.3em; font-weight: bold; background-color: #95a5a6; color: white; border: 2px solid #7f8c8d; border-radius: 10px; cursor: not-allowed; box-shadow: 0 4px 8px rgba(0,0,0,0.2); transition: all 0.2s;">
+              <button id="board-start-game-btn" disabled style="position: absolute; bottom: 15px; padding: 10px 30px; font-size: 1.1em; font-weight: bold; background-color: #95a5a6; color: white; border: 2px solid #7f8c8d; border-radius: 10px; cursor: not-allowed; box-shadow: 0 4px 8px rgba(0,0,0,0.2); transition: all 0.2s;">
                   等待對手加入...
               </button>
           `;
       } else {
           waitingHtml += `
-              <p style="position: absolute; bottom: 30px; font-size: 1.2em; color: #7f8c8d; font-weight: bold; margin: 0;">
+              <p style="position: absolute; bottom: 15px; font-size: 1.1em; color: #7f8c8d; font-weight: bold; margin: 0; width: 100%; text-align: center;">
                   等待房主開始遊戲...
               </p>
           `;
@@ -1359,13 +1360,23 @@ function isBoardFull() {
   }
 
   function updateInGameChatBadge() {
-    if (!inGameChatNotificationBadge) return;
-
-    if (unreadInGameMessages > 0) {
-      inGameChatNotificationBadge.textContent = unreadInGameMessages;
-      inGameChatNotificationBadge.classList.remove('hidden');
-    } else {
-      inGameChatNotificationBadge.classList.add('hidden');
+    if (inGameChatNotificationBadge) {
+      if (unreadInGameMessages > 0) {
+        inGameChatNotificationBadge.textContent = unreadInGameMessages;
+        inGameChatNotificationBadge.classList.remove('hidden');
+      } else {
+        inGameChatNotificationBadge.classList.add('hidden');
+      }
+    }
+    // ✨ 同步更新手機版懸浮大頭貼的紅點
+    const mobileChatBadge = document.getElementById('mobile-chat-badge');
+    if (mobileChatBadge) {
+      if (unreadInGameMessages > 0) {
+        mobileChatBadge.textContent = unreadInGameMessages;
+        mobileChatBadge.classList.remove('hidden');
+      } else {
+        mobileChatBadge.classList.add('hidden');
+      }
     }
   }
 
@@ -1617,23 +1628,17 @@ function isBoardFull() {
         updateChatBadge();
       }
       const inGameChatTab = document.getElementById('tab-content-ingame-chat');
-      if (inGameChatTab && !inGameChatTab.classList.contains('active')) {
+      // ✨ 增加檢查 show-floating (懸浮對話框是否開啟)
+      if (inGameChatTab && !inGameChatTab.classList.contains('active') && !inGameChatTab.classList.contains('show-floating')) {
           unreadInGameMessages++;
           updateInGameChatBadge();
       }
     }
 
     const targets = [];
-    if (chatMessages) {
-      targets.push(chatMessages);
-    }
-    if (inGameChatMessages) {
-      targets.push(inGameChatMessages);
-    }
-
-    if (targets.length === 0) {
-      return;
-    }
+    if (chatMessages) targets.push(chatMessages);
+    if (inGameChatMessages) targets.push(inGameChatMessages);
+    if (targets.length === 0) return;
 
     targets.forEach(target => {
       const messageElement = document.createElement('div');
@@ -1643,9 +1648,7 @@ function isBoardFull() {
         messageElement.classList.add('system-message');
         messageElement.innerHTML = `<span>${data.message}</span>`;
       } else {
-        if (data.senderId === myPlayerId) {
-          messageElement.classList.add('my-message');
-        }
+        if (data.senderId === myPlayerId) messageElement.classList.add('my-message');
         const senderNameSpan = document.createElement('span');
         senderNameSpan.className = 'sender-name';
         senderNameSpan.textContent = data.senderName;
@@ -1657,7 +1660,7 @@ function isBoardFull() {
       }
       
       target.appendChild(messageElement);
-      target.scrollTop = target.scrollHeight;
+      target.scrollTop = target.scrollHeight; // 自動捲到最新訊息
     });
   }
 
@@ -3376,6 +3379,27 @@ socket.on('sudoku_dispatch_progress', ({ progress }) => {
         }, 1000);
     }
 });
+
+    // ✨ Messenger 風格聊天大頭貼邏輯
+    const mobileFloatingChatBtn = document.getElementById('mobile-floating-chat-btn');
+    const inGameChatTabContent = document.getElementById('tab-content-ingame-chat');
+    
+    if (mobileFloatingChatBtn) {
+        mobileFloatingChatBtn.addEventListener('click', () => {
+            if (inGameChatTabContent) {
+                // 切換顯示/隱藏
+                inGameChatTabContent.classList.toggle('show-floating');
+                
+                // 如果是打開的狀態，清空紅點，並確保視窗滾動到最底
+                if (inGameChatTabContent.classList.contains('show-floating')) {
+                    unreadInGameMessages = 0;
+                    updateInGameChatBadge();
+                    const messagesContainer = document.querySelector('.in-game-chat-messages');
+                    if (messagesContainer) messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }
+            }
+        });
+    }
 
     setupEventListeners();
 

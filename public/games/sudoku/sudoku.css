@@ -2416,6 +2416,11 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
     z-index: 999999 !important; /* 確保大於房號輸入框的 1001 */
 }
 
+/* 電腦版預設隱藏手機版的大頭貼 */
+#mobile-floating-chat-btn {
+    display: none;
+}
+
 
 /* ==========================================================
    📱 1. 終極手機直向排版：懸浮雙卡片完美比例
@@ -2682,8 +2687,18 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
         font-size: 0.9rem !important;
     }
 
+    /* ======================================= */
+    /* ✨ 9. 手機版專屬：防爆筆記數字 (嚴格自適應容器尺寸) */
+    /* ======================================= */
+    .cell {
+        /* 將每個數獨格子定義為尺寸測量基準 */
+        container-type: inline-size !important; 
+    }
+
     .pencil-mark {
-        font-size: 0.25em !important; /* 手機小格子專屬縮小比例 */
+        /* 28cqw 確保字體大小永遠是格子寬度的 28%，達成完美 1/3 比例不溢出 */
+        font-size: 28cqw !important; 
+        line-height: 1 !important;
         width: 100% !important;
         height: 100% !important;
         margin: 0 !important;
@@ -2706,10 +2721,119 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
 
     /* 透過 order 屬性，在不更改 HTML 結構下將左右區塊對調 */
     .upper-controls > :nth-child(1) {
-        order: 2 !important; /* 原本左側的數字鍵盤（第一個子元素）排至右側 */
+        order: 2 !important; /* 原本左側的數字鍵盤排至右側 */
     }
     .upper-controls > :nth-child(2) {
-        order: 1 !important; /* 原本右側的遊戲資訊（第二個子元素）排至左側 */
+        order: 1 !important; /* 原本右側的遊戲資訊排至左側 */
+    }
+
+    /* ======================================= */
+    /* ✨ 12. 多人模式專屬：防撐破面板 */
+    /* ======================================= */
+    .control-quadrant {
+        min-width: 0 !important; 
+        max-width: 100% !important;
+        overflow: hidden !important; 
+    }
+    .in-game-tab-button {
+        padding: 5px 4px !important;
+        font-size: 0.8rem !important;
+        margin: 2px !important;
+        letter-spacing: -0.5px !important;
+    }
+    #opponent-progress-container {
+        gap: 8px !important;
+    }
+    .opponent-progress-item {
+        font-size: 0.8rem !important;
+        grid-template-columns: auto minmax(0, 1fr) 1fr auto !important; 
+    }
+
+    /* ======================================= */
+    /* ✨ 13. Messenger 風格懸浮聊天室 */
+    /* ======================================= */
+    
+    /* 1. 隱藏原本擠在面板裡的聊天室頁籤按鈕 */
+    .in-game-tab-button[data-tab="ingame-chat"] {
+        display: none !important;
+    }
+
+    /* 2. 顯示懸浮大頭貼按鈕 */
+    #mobile-floating-chat-btn {
+        display: flex !important;
+        position: fixed !important;
+        bottom: 25px !important;
+        right: 20px !important;
+        width: 55px !important;
+        height: 55px !important;
+        background-color: var(--theme-color-dark) !important;
+        color: white !important;
+        border-radius: 50% !important;
+        font-size: 26px !important;
+        justify-content: center !important;
+        align-items: center !important;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
+        z-index: 9999 !important;
+        cursor: pointer !important;
+        transition: transform 0.2s !important;
+    }
+    #mobile-floating-chat-btn:active {
+        transform: scale(0.9) !important;
+    }
+
+    /* 3. 大頭貼的專屬紅點 */
+    #mobile-chat-badge {
+        position: absolute !important;
+        top: -2px !important;
+        right: -2px !important;
+        background-color: #ff3d50 !important;
+        color: white !important;
+        font-size: 12px !important;
+        font-weight: bold !important;
+        width: 20px !important;
+        height: 20px !important;
+        border-radius: 50% !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+    }
+
+    /* 4. 把原本的聊天室內容，變成漂亮的懸浮對話框 */
+    #tab-content-ingame-chat {
+        position: fixed !important;
+        bottom: 90px !important; /* 浮在按鈕上方 */
+        right: 20px !important;
+        width: calc(100vw - 40px) !important;
+        max-width: 350px !important;
+        height: 50vh !important; /* 佔畫面一半高度，打字超方便 */
+        background-color: white !important;
+        border-radius: 16px !important;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important;
+        z-index: 9998 !important;
+        padding: 12px !important;
+        display: none !important; /* 預設隱藏 */
+        flex-direction: column !important;
+        border: 1px solid var(--border-color) !important;
+    }
+
+    /* 透過 JS 加上 class 來彈出對話框 */
+    #tab-content-ingame-chat.show-floating {
+        display: flex !important;
+    }
+
+    /* 確保字體大小適合手機閱讀 */
+    .in-game-chat-messages {
+        gap: 6px !important;
+        padding: 6px !important;
+    }
+    .in-game-chat-messages .message-content {
+        font-size: 0.9rem !important;
+        padding: 6px 10px !important;
+        line-height: 1.3 !important;
+    }
+    .in-game-chat-messages .sender-name {
+        font-size: 0.75rem !important;
+        margin-bottom: 2px !important;
     }
 }
 
