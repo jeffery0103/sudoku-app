@@ -2689,6 +2689,28 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
         margin: 0 !important;
         padding: 0 !important;
     }
+
+    /* ======================================= */
+    /* ✨ 10. 空間與人體工學最佳化：解答極簡化與鍵盤右移 */
+    /* ======================================= */
+    
+    /* 隱藏解答畫面標題，將空間完全留給解答棋盤 */
+    #solution-view h3 {
+        display: none !important;
+    }
+
+    /* 重新計算解答棋盤最大高度（扣除的邊距從 110px 縮減至 70px） */
+    #solution-board {
+        max-width: min(100%, calc(50dvh - 70px)) !important; 
+    }
+
+    /* 透過 order 屬性，在不更改 HTML 結構下將左右區塊對調 */
+    .upper-controls > :nth-child(1) {
+        order: 2 !important; /* 原本左側的數字鍵盤（第一個子元素）排至右側 */
+    }
+    .upper-controls > :nth-child(2) {
+        order: 1 !important; /* 原本右側的遊戲資訊（第二個子元素）排至左側 */
+    }
 }
 
 
