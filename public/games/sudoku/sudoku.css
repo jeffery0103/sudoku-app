@@ -2527,13 +2527,20 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
         min-height: 0 !important;
     }
 
-    #in-game-controls {
+    #in-game-controls:not(.hidden) {
         width: 100% !important;
         max-width: 450px !important;
         height: 100% !important;
         display: flex !important;
         flex-direction: column !important;
         gap: 8px !important;
+    }
+
+    #solution-view:not(.hidden) {
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+        height: 100% !important;
     }
 
     .upper-controls {
