@@ -1631,7 +1631,7 @@ input:checked + .slider:before {
   
   /* 將它定位在計時器的正上方 */
   position: absolute;
-  top: -18px; /* 向上移動，您可以微調這個數值 */
+  top: -5px; /* 向上移動，您可以微調這個數值 */
   right: 0;
 }
 
@@ -2610,6 +2610,51 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
         max-height: 90vh !important; 
         overflow-y: auto !important;
         padding: 20px 15px !important;
+    }
+
+    /* ======================================= */
+    /* ✨ 8. 修正資訊面板溢出與開關名稱自動縮寫 */
+    /* ======================================= */
+    
+    /* 讓 Undo / Redo 的字體稍微縮小，完美塞入按鈕 */
+    #undo-btn span, #redo-btn span {
+        font-size: 0.95rem !important; 
+        font-weight: bold !important;
+    }
+
+    /* 縮小遊戲資訊內的文字與間距，防止被擠到按鈕下面 */
+    #game-info-panel .info-item {
+        font-size: 0.8rem !important;
+        padding: 2px 0 !important;
+    }
+    .info-item-column h4 {
+        font-size: 0.85rem !important;
+        margin-bottom: 2px !important;
+    }
+    .info-item-column p {
+        font-size: 0.75rem !important;
+        line-height: 1.2 !important;
+    }
+    #game-info-panel hr {
+        margin: 6px 0 !important;
+    }
+
+    /* 透過 CSS 魔法，只在手機版把「筆記模式」替換成「筆記」 */
+    label[for="pencil-toggle-checkbox"] .switch-label {
+        font-size: 0 !important; /* 把原本的字隱藏 */
+    }
+    label[for="pencil-toggle-checkbox"] .switch-label::after {
+        content: "筆記";         /* 召喚出新的短文字 */
+        font-size: 0.9rem !important;
+    }
+
+    /* 同理，把「高亮輔助」替換成「高亮」 */
+    label[for="highlight-helper-checkbox"] .switch-label {
+        font-size: 0 !important;
+    }
+    label[for="highlight-helper-checkbox"] .switch-label::after {
+        content: "高亮";
+        font-size: 0.9rem !important;
     }
 }
 

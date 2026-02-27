@@ -2826,7 +2826,7 @@ async function handleNumberInput(number) {
       const undoDiv = document.createElement("div");
       undoDiv.id = "undo-btn";
       undoDiv.classList.add("control-key", "control-button-style");
-      undoDiv.innerHTML = "<span>復原</span>";
+      undoDiv.innerHTML = "<span>Undo</span>";
       undoDiv.addEventListener("click", undo); // 呼叫新的 undo 函式
       paletteElement.appendChild(undoDiv);
 
@@ -2834,7 +2834,7 @@ async function handleNumberInput(number) {
       const redoDiv = document.createElement("div");
       redoDiv.id = "redo-btn";
       redoDiv.classList.add("control-key", "control-button-style");
-      redoDiv.innerHTML = "<span>取消<br>復原</span>";
+      redoDiv.innerHTML = "<span>取消<br>Redo</span>";
       redoDiv.addEventListener("click", redo); // 呼叫新的 redo 函式
       paletteElement.appendChild(redoDiv);
       // 【新增結束】
