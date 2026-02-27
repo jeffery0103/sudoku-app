@@ -2822,7 +2822,7 @@ async function handleNumberInput(number) {
       
       // ▼▼▼▼▼ 用以下這整段邏輯，來取代您舊的 undo/delete 邏輯 ▼▼▼▼▼
 
-      // 建立「復原」按鈕
+      // 復原
       const undoDiv = document.createElement("div");
       undoDiv.id = "undo-btn";
       undoDiv.classList.add("control-key", "control-button-style");
@@ -2830,14 +2830,13 @@ async function handleNumberInput(number) {
       undoDiv.addEventListener("click", undo); // 呼叫新的 undo 函式
       paletteElement.appendChild(undoDiv);
 
-      // 【是的，您需要新增這一段來建立「取消復原」按鈕】
+      // 取消復原
       const redoDiv = document.createElement("div");
       redoDiv.id = "redo-btn";
       redoDiv.classList.add("control-key", "control-button-style");
-      redoDiv.innerHTML = "<span>取消<br>Redo</span>";
+      redoDiv.innerHTML = "<span>Redo</span>";
       redoDiv.addEventListener("click", redo); // 呼叫新的 redo 函式
       paletteElement.appendChild(redoDiv);
-      // 【新增結束】
 
       // 建立「Delete」按鈕
       const deleteDiv = document.createElement("div");

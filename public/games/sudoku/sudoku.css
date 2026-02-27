@@ -2656,6 +2656,14 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
         content: "高亮";
         font-size: 0.9rem !important;
     }
+
+    .pencil-mark {
+        font-size: 0.28em !important; /* 手機小格子專屬縮小比例 */
+        width: 100% !important;
+        height: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
 }
 
 
