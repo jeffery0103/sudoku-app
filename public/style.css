@@ -262,27 +262,32 @@ button,
 }
 
 /* ==========================================================
-   🚀 APP 啟動載入畫面 (完美序列版)
+   🚀 APP 啟動載入畫面 (完美序列版 - 變數修正版)
    ========================================================== */
 #splash-screen {
     position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-    background-color: var(--bg-color-light);
+    /* ✨ 修正：改用 style.css 專屬的米色變數 */
+    background-color: var(--bg-main); 
     display: flex; justify-content: center; align-items: center; flex-direction: column;
     z-index: 9999999; transition: opacity 0.5s ease-out;
 }
+
 /* 讓文字絕對定位，切換時就不會上下跳動 */
 .splash-text {
-    position: absolute; margin: 0; color: var(--theme-color-dark); font-weight: bold;
+    /* ✨ 修正：改用 style.css 專屬的深色變數 */
+    position: absolute; margin: 0; color: var(--text-primary); font-weight: bold;
     transition: opacity 0.5s ease-out, transform 0.5s ease-out; pointer-events: none;
 }
 #splash-phase-1 { font-size: clamp(2.5rem, 8vw, 3.5rem); text-transform: uppercase; }
 #splash-phase-2 { font-size: clamp(1.2rem, 4vw, 1.5rem); }
 
-/* 棋盤容器：改用 max-width 防止手機版高度坍塌變白框 */
+/* 棋盤容器 */
 .splash-animation-container {
     position: absolute;
     width: 80vw; max-width: 300px; height: 80vw; max-height: 300px;
-    background-color: #fff; border-radius: 8px; border: 2px solid var(--theme-color-dark);
+    background-color: #fff; border-radius: 8px; 
+    /* ✨ 修正外框顏色 */
+    border: 2px solid var(--text-primary);
     box-shadow: 0 5px 15px rgba(0,0,0,0.1);
     display: flex; flex-direction: column; align-items: center;
     transition: opacity 0.5s ease-out, transform 0.5s ease-out;
@@ -293,21 +298,26 @@ button,
 }
 .splash-cell {
     border: 1px solid rgba(93, 83, 74, 0.15); display: flex; justify-content: center; align-items: center;
-    color: var(--theme-color-dark); font-size: clamp(0.8rem, 2.5vw, 1.1rem); font-weight: bold;
+    /* ✨ 修正數字顏色 */
+    color: var(--text-primary); font-size: clamp(0.8rem, 2.5vw, 1.1rem); font-weight: bold;
     opacity: 0; transition: opacity 0.1s ease-out;
 }
 .splash-cell.written { opacity: 1; }
-.splash-cell:nth-child(3n) { border-right: 1.5px solid var(--theme-color-dark); }
-.splash-cell:nth-child(n+19):nth-child(-n+27), .splash-cell:nth-child(n+46):nth-child(-n+54) { border-bottom: 1.5px solid var(--theme-color-dark); }
+
+/* ✨ 修正 3x3 粗格線顏色 */
+.splash-cell:nth-child(3n) { border-right: 1.5px solid var(--text-primary); }
+.splash-cell:nth-child(n+19):nth-child(-n+27), .splash-cell:nth-child(n+46):nth-child(-n+54) { border-bottom: 1.5px solid var(--text-primary); }
 
 /* 修正 Emoji 筆的對齊點與滑順移動 */
 .splash-pen {
     position: absolute; font-size: 30px; line-height: 1; z-index: 10;
     transform-origin: bottom left; margin-top: -30px; margin-left: -5px;
     animation: penWritingShaking 0.3s ease-in-out infinite;
-    transition: left 0.08s linear, top 0.08s linear; /* 移動更滑順 */
+    transition: left 0.08s linear, top 0.08s linear; 
 }
 @keyframes penWritingShaking { 0% { transform: rotate(0deg); } 50% { transform: rotate(-15deg); } 100% { transform: rotate(0deg); } }
 
 .splash-progress-container { position: absolute; bottom: -15px; width: 100%; height: 6px; background-color: rgba(93, 83, 74, 0.1); border-radius: 4px; overflow: hidden; }
-.splash-progress-bar { width: 0%; height: 100%; background-color: var(--theme-color-dark); transition: width 0.1s linear; }
+
+/* ✨ 修正進度條顏色 */
+.splash-progress-bar { width: 0%; height: 100%; background-color: var(--text-primary); transition: width 0.1s linear; }
