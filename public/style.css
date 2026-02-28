@@ -317,7 +317,36 @@ button,
 }
 @keyframes penWritingShaking { 0% { transform: rotate(0deg); } 50% { transform: rotate(-15deg); } 100% { transform: rotate(0deg); } }
 
-.splash-progress-container { position: absolute; bottom: -15px; width: 100%; height: 6px; background-color: rgba(93, 83, 74, 0.1); border-radius: 4px; overflow: hidden; }
+.splash-progress-container {
+    position: absolute; 
+    bottom: -15px; 
+    width: 100%; 
+    height: 10px; /* ✨ 高度稍微增加一點，看起來比較大氣 */
+    background-color: rgba(93, 83, 74, 0.1); 
+    border-radius: 4px; 
+    display: flex; /* ✨ 啟用 flex */
+    align-items: center; /* 垂直置中 */
+    justify-content: space-between; /* 兩端對齊 */
+    padding: 0 5px; /* 左右留一點小邊距 */
+}
 
-/* ✨ 修正進度條顏色 */
-.splash-progress-bar { width: 0%; height: 100%; background-color: var(--text-primary); transition: width 0.1s linear; }
+/* ✨ 修改：進度條本身，不要寫死 width 100%，改用 flex-grow */
+.splash-progress-bar { 
+    width: 0%; /* 初始為 0 */
+    height: 5px; /* ✨ 高度比容器矮一點，呈現凹槽感 */
+    background-color: var(--text-primary); 
+    border-radius: 4px; 
+    transition: width 0.1s linear; 
+    flex-grow: 1; /* ✨ 自動佔滿剩餘空間 */
+    margin-right: 10px; /* ✨ 跟右邊數字保持距離 */
+}
+
+/* ✨ 新增：百分比數字樣式 */
+.splash-progress-text {
+    font-size: 10px; /* 細小的數字，更有載入質感 */
+    color: var(--text-primary);
+    font-weight: bold;
+    font-family: monospace; /* ✨ 使用等寬字體，防止數字跳動時閃爍 */
+    min-width: 25px; /* ✨ 設個最小寬度，防止 9% 變 10% 時排版晃動 */
+    text-align: right;
+}
