@@ -2,6 +2,14 @@
 /* Sudoku 遊戲專用樣式表 (最終整合版)            */
 /* ====================================================== */
 
+/* 鎖死基準字體 */
+@media screen and (max-width: 768px) {
+  html {
+    font-size: 16px !important; 
+    -webkit-text-size-adjust: 100% !important;
+    text-size-adjust: 100% !important;
+  }
+}
 /* --- 1. 變數與全域設定 --- */
 :root {
   --highlight-bg: #eed5b1; /* 輔助高亮的背景色 */
@@ -2598,8 +2606,8 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
     .lower-controls > button, 
     .switch-control {
         padding: 8px 4px !important;
-        font-size: 0.9rem !important;
-        margin: 0 !important; /* 清除可能殘留的外距 */
+        font-size: clamp(0.7rem, 3vw, 1rem) !important; 
+        margin: 0 !important; 
     }
 
     /* ======================================= */
