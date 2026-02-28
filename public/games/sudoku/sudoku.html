@@ -284,119 +284,147 @@
   </div>
 
   <script>
-    window.addEventListener('load', () => {
-      const splash = document.getElementById('splash-screen');
-      const splashContent = document.querySelector('.splash-content');
-      const grid = document.getElementById('splash-grid');
-      const pen = document.getElementById('splash-pen');
-      const progressBar = document.getElementById('splash-progress');
+    // 使用 DOMContentLoaded 確保第一時間執行，不被其他資源卡住
+    document.addEventListener('DOMContentLoaded', () => {
+        const phase1 = document.getElementById('splash-phase-1');
+        const phase2 = document.getElementById('splash-phase-2');
+        const phase3 = document.getElementById('splash-phase-3');
+        const grid = document.getElementById('splash-grid');
+        const pen = document.getElementById('splash-pen');
+        const progressBar = document.getElementById('splash-progress');
+        const splashScreen = document.getElementById('splash-screen');
 
-      if (!splash || !splashContent || !grid || !pen || !progressBar) return;
+        if (!splashScreen) return;
 
-      // 1. 文字顯現序列
-      setTimeout(() => splashContent.classList.add('sequence-jeffery'), 1000);
+        // ==== 🎬 完美時間軸序列 ====
+        // 1. 停留 1 秒後，隱藏標題，顯示作者
+        setTimeout(() => {
+            phase1.style.opacity = '0';
+            phase1.style.transform = 'translateY(-10px)';
 
-      // 2. ✨ 1毫秒瞬間算出合法隨機盤面！
-      function generateRandomBoard() {
-          const board = Array.from({ length: 9 }, () => Array(9).fill(0));
-          function isValid(r, c, k) {
-              for (let i = 0; i < 9; i++) {
-                  const m = 3 * Math.floor(r / 3) + Math.floor(i / 3);
-                  const n = 3 * Math.floor(c / 3) + (i % 3);
-                  if (board[r][i] === k || board[i][c] === k || board[m][n] === k) return false;
-              }
-              return true;
-          }
-          function solve() {
-              for (let r = 0; r < 9; r++) {
-                  for (let c = 0; c < 9; c++) {
-                      if (board[r][c] === 0) {
-                          const nums = [1, 2, 3, 4, 5, 6, 7, 8, 9].sort(() => Math.random() - 0.5);
-                          for (let k of nums) {
-                              if (isValid(r, c, k)) {
-                                  board[r][c] = k;
-                                  if (solve()) return true;
-                                  board[r][c] = 0;
-                              }
-                          }
-                          return false;
-                      }
-                  }
-              }
-              return true;
-          }
-          solve();
-          return board;
-      }
+            setTimeout(() => {
+                phase2.style.opacity = '1';
+                phase2.style.transform = 'translateY(0)';
 
-      const authenticBoard = generateRandomBoard();
+                // 2. 停留 1.2 秒後，隱藏作者，顯示棋盤
+                setTimeout(() => {
+                    phase2.style.opacity = '0';
+                    phase2.style.transform = 'translateY(-10px)';
 
-      // 填入盤面 (初始隱藏)
-      for (let r = 0; r < 9; r++) {
-          for (let c = 0; c < 9; c++) {
-              const cell = document.createElement('div');
-              cell.className = 'splash-cell';
-              cell.id = `splash-cell-${r * 9 + c}`;
-              cell.textContent = authenticBoard[r][c]; 
-              grid.appendChild(cell);
-          }
-      }
+                    setTimeout(() => {
+                        phase3.style.opacity = '1';
+                        phase3.style.transform = 'scale(1)';
 
-      // 3. 飛筆路線
-      const writingPath = [
-          [0,0], [0,1], [1,1], [1,2], [0,2], [0,3], [0,4], [1,4], [2,4],
-          [2,5], [1,5], [0,5], [0,6], [0,7], [1,7], [2,7], [2,6], [3,6],
-          [4,6], [4,7], [5,7], [6,7], [6,8], [5,8], [4,8], [3,8], [2,8],
-          [1,8], [0,8], [1,0], [2,0], [2,1], [3,1], [3,0], [4,0], [5,0],
-          [5,1], [6,1], [6,0], [7,0], [8,0], [8,1], [7,1], [7,2], [8,2],
-          [8,3], [7,3], [7,4], [8,4], [8,5], [7,5], [7,6], [8,6], [8,7],
-          [7,7], [7,8], [8,8]
-      ];
+                        // 3. 呼叫畫圖演算法
+                        startGridAnimation();
 
-      let currentIndex = 0;
-      const totalSteps = writingPath.length;
+                    }, 500); // 等待作者淡出
+                }, 1200); // 作者顯示時間
+            }, 500); // 等待標題淡出
+        }, 1000); // 標題顯示時間
 
-      function writeNextCell() {
-          if (currentIndex < totalSteps) {
-              const [row, col] = writingPath[currentIndex];
-              const targetX = col * (100 / 9) + (100 / 18);
-              const targetY = row * (100 / 9) + (100 / 18);
+        function startGridAnimation() {
+            // 瞬間生成合法盤面
+            function generateRandomBoard() {
+                const board = Array.from({ length: 9 }, () => Array(9).fill(0));
+                function isValid(r, c, k) {
+                    for (let i = 0; i < 9; i++) {
+                        const m = 3 * Math.floor(r / 3) + Math.floor(i / 3);
+                        const n = 3 * Math.floor(c / 3) + (i % 3);
+                        if (board[r][i] === k || board[i][c] === k || board[m][n] === k) return false;
+                    }
+                    return true;
+                }
+                function solve() {
+                    for (let r = 0; r < 9; r++) {
+                        for (let c = 0; c < 9; c++) {
+                            if (board[r][c] === 0) {
+                                const nums = [1, 2, 3, 4, 5, 6, 7, 8, 9].sort(() => Math.random() - 0.5);
+                                for (let k of nums) {
+                                    if (isValid(r, c, k)) { board[r][c] = k; if (solve()) return true; board[r][c] = 0; }
+                                }
+                                return false;
+                            }
+                        }
+                    }
+                    return true;
+                }
+                solve(); return board;
+            }
 
-              pen.style.setProperty('left', `${targetX}%`, 'important');
-              pen.style.setProperty('top', `${targetY}%`, 'important');
+            const authenticBoard = generateRandomBoard();
 
-              const targetCell = document.getElementById(`splash-cell-${row * 9 + col}`);
-              if (targetCell) targetCell.classList.add('written');
+            // 填入格子
+            for (let r = 0; r < 9; r++) {
+                for (let c = 0; c < 9; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'splash-cell';
+                    cell.id = `splash-cell-${r * 9 + c}`;
+                    cell.textContent = authenticBoard[r][c];
+                    grid.appendChild(cell);
+                }
+            }
 
-              progressBar.style.width = `${((currentIndex + 1) / totalSteps) * 100}%`;
-              currentIndex++;
-              
-              setTimeout(writeNextCell, 120 + Math.random() * 50); 
-          } else {
-              progressBar.style.width = '100%';
-              setTimeout(() => {
-                  splash.classList.add('fade-out');
-                  setTimeout(() => splash.style.display = 'none', 800);
-              }, 300);
-          }
-      }
+            const writingPath = [
+                [0,0], [0,1], [1,1], [1,2], [0,2], [0,3], [0,4], [1,4], [2,4],
+                [2,5], [1,5], [0,5], [0,6], [0,7], [1,7], [2,7], [2,6], [3,6],
+                [4,6], [4,7], [5,7], [6,7], [6,8], [5,8], [4,8], [3,8], [2,8],
+                [1,8], [0,8], [1,0], [2,0], [2,1], [3,1], [3,0], [4,0], [5,0],
+                [5,1], [6,1], [6,0], [7,0], [8,0], [8,1], [7,1], [7,2], [8,2],
+                [8,3], [7,3], [7,4], [8,4], [8,5], [7,5], [7,6], [8,6], [8,7],
+                [7,7], [7,8], [8,8]
+            ];
 
-      setTimeout(writeNextCell, 200);
+            let currentIndex = 0;
+            const totalSteps = writingPath.length;
+
+            function writeNextCell() {
+                if (currentIndex < totalSteps) {
+                    const [row, col] = writingPath[currentIndex];
+                    // 計算精準定位
+                    const targetX = col * (100 / 9) + (100 / 18);
+                    const targetY = row * (100 / 9) + (100 / 18);
+
+                    pen.style.left = `${targetX}%`;
+                    pen.style.top = `${targetY}%`;
+
+                    const targetCell = document.getElementById(`splash-cell-${row * 9 + col}`);
+                    if (targetCell) targetCell.classList.add('written');
+
+                    progressBar.style.width = `${((currentIndex + 1) / totalSteps) * 100}%`;
+                    currentIndex++;
+
+                    setTimeout(writeNextCell, 80); // 書寫速度
+                } else {
+                    progressBar.style.width = '100%';
+                    // 寫完後等待 0.5 秒再退場
+                    setTimeout(() => {
+                        splashScreen.style.opacity = '0';
+                        setTimeout(() => {
+                            splashScreen.style.display = 'none';
+                            
+                            // 📢 【核心關鍵】廣播：動畫播完了！可以問名字了！
+                            window.dispatchEvent(new Event('splashComplete'));
+                            
+                        }, 500);
+                    }, 500);
+                }
+            }
+            // 延遲 0.3 秒再開始寫字
+            setTimeout(writeNextCell, 300);
+        }
     });
   </script>
 
 </body>
 
 <div id="splash-screen">
-    <div class="splash-content">
-      <h1 class="app-title" id="splash-text-sudoku">數獨 Sudoku</h1>
-      <h2 class="company-name hidden" id="splash-text-jeffery">Made by Jeffery Studio, NCU</h2>
-      
-      <div class="splash-animation-container">
-        <div class="splash-grid" id="splash-grid"></div>
-        <div class="splash-pen" id="splash-pen" style="font-size: 35px; line-height: 1;">✏️</div>
-      </div>
-
+    <h1 class="splash-text" id="splash-phase-1">數獨 Sudoku</h1>
+    <h2 class="splash-text" id="splash-phase-2" style="opacity: 0; transform: translateY(10px);">Made by Jeffery Studio, NCU</h2>
+    
+    <div id="splash-phase-3" class="splash-animation-container" style="opacity: 0; transform: scale(0.9);">
+      <div class="splash-grid" id="splash-grid"></div>
+      <div class="splash-pen" id="splash-pen">✏️</div>
       <div class="splash-progress-container">
         <div class="splash-progress-bar" id="splash-progress"></div>
       </div>

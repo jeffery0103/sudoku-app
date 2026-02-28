@@ -123,11 +123,17 @@ document.addEventListener("DOMContentLoaded", () => {
     
     displayPlayerNameSpan.textContent = myPlayerName;
     playerInfoDisplay.classList.remove("hidden");
-    loginScreen.classList.add("hidden");
-    mainAppScreen.classList.remove("hidden");
     
-    // 登入成功後，直接載入數獨遊戲！
-    loadGame('sudoku');
+    // ✨ 修改點：按下確認後，先隱藏登入畫面，但不立刻載入遊戲
+    loginScreen.classList.add("hidden");
+
+    // 📢 監聽來自啟動動畫的「完成廣播」
+    window.addEventListener('splashComplete', () => {
+        console.log("啟動動畫播放完畢，正式載入遊戲介面！");
+        mainAppScreen.classList.remove("hidden");
+        // 動畫播完了，這時候才載入數獨遊戲
+        loadGame('sudoku'); 
+    }, { once: true }); // 使用 once 確保這個監聽器只會執行一次
   }
 
   // --- 綁定登入事件 ---
