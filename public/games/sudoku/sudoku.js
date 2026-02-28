@@ -1200,19 +1200,32 @@ function isBoardFull() {
             };
         }
     } else {
-        // 單人模式：顯示再來一局，隱藏觀戰與退出房間
+        // ✨ 單人模式：顯示「再來一局」與「返回主選單」
         if (winModalNewGameBtn) {
             winModalNewGameBtn.classList.remove("hidden");
             winModalNewGameBtn.textContent = "再來一局";
             winModalNewGameBtn.onclick = () => {
-                socket.emit('sudoku_leave_single_player_game');
+                // 改用標準的 leaveRoom 來徹底清理伺服器上的單人房間
+                socket.emit("leaveRoom", { roomId: currentGameId }); 
                 resetUIForNewGame();
                 winModalOverlay.classList.add("hidden");
                 appContainer.classList.add("hidden");
+                // 直接跳出難度選擇，讓玩家無縫開下一局
                 difficultyModalOverlay.classList.remove("hidden");
             };
         }
-        if (exitRoomBtn) exitRoomBtn.classList.add("hidden");
+        
+        // ✨ 核心修復：把原本隱藏的退出按鈕打開，並賦予「返回主選單」的功能
+        if (exitRoomBtn) {
+            exitRoomBtn.classList.remove("hidden");
+            exitRoomBtn.textContent = "返回主選單"; 
+            exitRoomBtn.onclick = () => {
+                // 退出房間並徹底重置回最初的模式選擇畫面
+                socket.emit("leaveRoom", { roomId: currentGameId }); 
+                resetToModeSelection(); 
+            };
+        }
+        
         if (winModalExtremeBtn) winModalExtremeBtn.classList.add("hidden");
     }
 
