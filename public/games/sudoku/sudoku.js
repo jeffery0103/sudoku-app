@@ -3447,40 +3447,48 @@ socket.on('sudoku_dispatch_progress', ({ progress }) => {
             initialY = rect.top;
         }, { passive: true });
 
-        // 在 init() 函式的拖曳邏輯中更新 touchmove 部份
-// 監聽觸控移動
-        floatingBtn.addEventListener('touchmove', (e) => {
-            const touch = e.touches[0];
-            const dx = touch.clientX - startX;
-            const dy = touch.clientY - startY;
+        // 監聽觸控移動
+floatingBtn.addEventListener('touchmove', (e) => {
+    // ✨ 客觀防護：如果不是單指觸控，或是按鈕不存在，就不處理
+    if (!e.touches || e.touches.length !== 1) return;
 
-            if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
-                isDragging = true;
-                
-                // 1. 計算預計的新位置
-                let newLeft = initialX + dx;
-                let newTop = initialY + dy;
+    const touch = e.touches[0];
+    const dx = touch.clientX - startX;
+    const dy = touch.clientY - startY;
 
-                // 2. 獲取螢幕與按鈕的物理尺寸
-                const btnRect = floatingBtn.getBoundingClientRect();
-                const screenW = window.innerWidth;
-                const screenH = window.innerHeight;
+    // ✨ 防呆邏輯：滑動超過 5px 才判定為拖曳，避免手抖誤判為點擊
+    if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+        isDragging = true;
+        
+        // ✨ 強制阻止瀏覽器預設的滾動行為 (必須搭配 { passive: false })
+        if (e.cancelable) {
+            e.preventDefault(); 
+        }
+        
+        // 1. 計算預計的新位置
+        let newLeft = initialX + dx;
+        let newTop = initialY + dy;
 
-                // 3. 上下邊界限制：不准超過 0，也不准超過 (螢幕高度 - 按鈕高度)
-                if (newTop < 0) newTop = 0;
-                if (newTop > screenH - btnRect.height) newTop = screenH - btnRect.height;
+        // 2. 獲取螢幕與按鈕的物理尺寸
+        const btnRect = floatingBtn.getBoundingClientRect();
+        const screenW = window.innerWidth;
+        const screenH = window.innerHeight;
 
-                // 4. 左右邊界限制 (順便防滑出螢幕)
-                if (newLeft < 0) newLeft = 0;
-                if (newLeft > screenW - btnRect.width) newLeft = screenW - btnRect.width;
+        // 3. 上下邊界限制：不准超過 0，也不准超過 (螢幕高度 - 按鈕高度)
+        if (newTop < 0) newTop = 0;
+        if (newTop > screenH - btnRect.height) newTop = screenH - btnRect.height;
 
-                // 5. 套用位置 (✨ 核心修正：使用 setProperty 加上 important 壓制 CSS)
-                floatingBtn.style.setProperty('left', newLeft + 'px', 'important');
-                floatingBtn.style.setProperty('top', newTop + 'px', 'important');
-                floatingBtn.style.setProperty('bottom', 'auto', 'important');
-                floatingBtn.style.setProperty('right', 'auto', 'important');
-            }
-        }, { passive: false });
+        // 4. 左右邊界限制 (順便防滑出螢幕)
+        if (newLeft < 0) newLeft = 0;
+        if (newLeft > screenW - btnRect.width) newLeft = screenW - btnRect.width;
+
+        // 5. 套用位置 (使用 setProperty 加上 important 壓制 CSS)
+        floatingBtn.style.setProperty('left', newLeft + 'px', 'important');
+        floatingBtn.style.setProperty('top', newTop + 'px', 'important');
+        floatingBtn.style.setProperty('bottom', 'auto', 'important');
+        floatingBtn.style.setProperty('right', 'auto', 'important');
+    }
+}, { passive: false }); // ✨ 必須是 false 才能使用 preventDefault()
 
         // 監聽觸控結束
         floatingBtn.addEventListener('touchend', (e) => {
