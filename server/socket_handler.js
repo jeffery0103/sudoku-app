@@ -279,13 +279,16 @@ module.exports = function(io, sudokuGame, rooms, pendingJoinRequests, activeSudo
     socket.on('playerReconnected', ({ playerId, roomId }) => {
         const reconnectionData = gracefulDisconnects[playerId];
         if (reconnectionData && reconnectionData.roomId === roomId) {
-            console.log(`[斷線保護] 玩家 ${playerId} 在時間內成功重連！`);
             clearTimeout(reconnectionData.timer);
 
             const room = rooms[roomId];
             if (room) {
                 const player = room.players.find(p => p.id === playerId);
                 if (player) {
+                    // ✨ 升級版後台日誌：印出完整的身分替換過程
+                    console.log(`[斷線保護] ⚡ 玩家 "${player.name}" 成功重連至房間 ${roomId}！`);
+                    console.log(`          舊 ID: ${playerId}  -->  新 ID: ${socket.id}`);
+
                     player.id = socket.id;
                     socket.playerName = player.name;
                     player.status = 'playing';
@@ -298,10 +301,13 @@ module.exports = function(io, sudokuGame, rooms, pendingJoinRequests, activeSudo
                     socket.emit('reconnectionSuccess', {
                         gameType: room.gameType,
                         gameState: room.gameState,
+                        roomId: roomId // 順便把 roomId 傳給前端印日誌
                     });
                 }
             }
             delete gracefulDisconnects[playerId];
+        } else {
+            console.log(`[斷線保護] ⚠️ 收到無效的重連請求。玩家 ID: ${playerId}, 房號: ${roomId}`);
         }
     });
 

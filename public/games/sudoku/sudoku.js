@@ -443,9 +443,17 @@ function isBoardFull() {
       badge.textContent = '0';
       badge.style.setProperty('display', 'none', 'important');
     }
+    
+    // --- 原本就有的：清空遊戲內聊天 ---
     unreadInGameMessages = 0;
     if (inGameChatNotificationBadge) inGameChatNotificationBadge.classList.add('hidden');
-    if (inGameChatMessages) inGameChatMessages.innerHTML = ''; // 清空聊天紀錄
+    if (inGameChatMessages) inGameChatMessages.innerHTML = ''; 
+
+    // ▼▼▼ ✨ 補上這段：強制清空大廳等待室的聊天紀錄與紅點 ▼▼▼
+    unreadChatMessages = 0;
+    if (chatNotificationBadge) chatNotificationBadge.classList.add('hidden');
+    if (chatMessages) chatMessages.innerHTML = '';
+    // ▲▲▲ 補上這段結束 ▲▲▲
 
     if (boardElement) {
       boardElement.innerHTML = '';
@@ -2190,21 +2198,7 @@ function setupEventListeners() {
     
     
 
-    socket.on('reconnectionSuccess', (data) => {
-        console.log('[斷線保護] 重連成功！正在恢復遊戲狀態...');
-        showCustomAlert("斷線重連成功！");
-        gameMode = 'multiplayer';
-        currentGameId = data.roomId;
-        appContainer.classList.remove('hidden');
-        sudokuModeModalOverlay.classList.add('hidden');
-        difficultyModalOverlay.classList.add('hidden');
-        setUIState('playing_multiplayer');
-        if(data.gameState && data.gameState.puzzle) {
-          newGame(data.gameState.puzzle);
-          updateOpponentProgressUI(data.players);
-          updateTimerDisplay(data.gameState.seconds);
-        }
-    });
+    
 
     // --- 修正後的觀戰更新邏輯 ---
     socket.on('sudoku_spectateUpdate', (data) => {
@@ -3063,20 +3057,20 @@ socket.on('sudoku_storm_hit', ({ r, c, mark }) => {
   
 
   socket.on('reconnectionSuccess', (data) => {
-      console.log('[斷線保護] 重連成功！正在恢復遊戲狀態...');
+      // ✨ 升級版 F12 瀏覽器日誌
+      console.log(`%c[斷線保護] 🎊 重連成功！伺服器已核准身分。`, `color: #28a745; font-weight: bold; font-size: 1.1em;`);
+      console.log(`%c ➜ 正在恢復至房間 ${data.roomId} 的遊戲狀態...`, `color: #007bff;`);
+      console.log(`%c ➜ 我當前的新 Socket ID: ${myPlayerId}`, `color: #6c757d;`);
+      
       showCustomAlert("斷線重連成功！");
-      // 這裡需要根據 data 恢復遊戲畫面的完整邏輯
-      // 例如：更新 opponentStates, 重繪棋盤, 更新計時器...
       gameMode = 'multiplayer';
       currentGameId = data.roomId;
       
-      // 確保UI處於正確的遊戲狀態
       appContainer.classList.remove('hidden');
       sudokuModeModalOverlay.classList.add('hidden');
       difficultyModalOverlay.classList.add('hidden');
       setUIState('playing_multiplayer');
       
-      // 根據重連資料恢復遊戲
       if(data.gameState && data.gameState.puzzle) {
         newGame(data.gameState.puzzle);
         updateOpponentProgressUI(data.players);
