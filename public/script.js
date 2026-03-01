@@ -111,7 +111,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   
   // --- 處理玩家登入 ---
-  // --- 處理玩家登入 ---
   function handleLogin() {
     const name = playerNameInput.value.trim();
     if (!name) {
@@ -122,13 +121,21 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     myPlayerName = name;
     
-    displayPlayerNameSpan.textContent = myPlayerName;
-    playerInfoDisplay.classList.remove("hidden");
+    // ✨ 加上安全檢查，避免抓不到元件導致程式崩潰
+    if (displayPlayerNameSpan) {
+      displayPlayerNameSpan.textContent = myPlayerName;
+    } else if (playerInfoDisplay) {
+      // 如果沒有 span 元件，我們直接把字塞進 playerInfoDisplay 裡面
+      playerInfoDisplay.textContent = `玩家：${myPlayerName}`;
+    }
+    
+    if (playerInfoDisplay) {
+      playerInfoDisplay.classList.remove("hidden");
+    }
     
     // 按下確認後，隱藏登入畫面
     loginScreen.classList.add("hidden");
 
-    // ✨ 核心修復：動畫早就播完了，不用再等廣播了！直接顯示主畫面並載入遊戲！
     console.log("登入成功，正式載入遊戲介面！");
     mainAppScreen.classList.remove("hidden");
     loadGame('sudoku'); 
