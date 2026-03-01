@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>曼哈頓路徑解碼器</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #fee9ca; /* 搭配你數獨APP的米色主題 */
+            padding: 20px;
+        }
+        h1 {
+            color: #5d534a;
+        }
+        #controls {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        button, input[type="file"] {
+            padding: 8px 16px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 6px;
+            border: 1px solid #c0b2a3;
+            background-color: #fff;
+            color: #5d534a;
+        }
+        button:hover:not(:disabled) {
+            background-color: #eae4dd;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        #canvas-container {
+            position: relative;
+            background-color: #fff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            padding: 20px;
+        }
+        canvas {
+            display: block;
+        }
+        #path-info {
+            margin-top: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #5d534a;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🔍 曼哈頓路徑解碼器</h1>
+    
+    <div id="controls">
+        <input type="file" id="file-input" accept=".json">
+        <button id="prev-btn" disabled>上一條</button>
+        <button id="next-btn" disabled>下一條</button>
+        <button id="random-btn" disabled>隨機抽一條</button>
+    </div>
+
+    <div id="canvas-container">
+        <canvas id="path-canvas" width="450" height="450"></canvas>
+    </div>
+    
+    <div id="path-info">請載入 paths.json 檔案</div>
+
+    <script>
+        const canvas = document.getElementById('path-canvas');
+        const ctx = canvas.getContext('2d');
+        const fileInput = document.getElementById('file-input');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const randomBtn = document.getElementById('random-btn');
+        const pathInfo = document.getElementById('path-info');
+
+        let allPaths = [];
+        let currentIndex = 0;
+
+        const GRID_SIZE = 9;
+        const CELL_SIZE = 50; 
+
+        // 讀取 JSON 檔案
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    allPaths = JSON.parse(e.target.result);
+                    if (Array.isArray(allPaths) && allPaths.length > 0) {
+                        currentIndex = 0;
+                        updateButtons();
+                        drawPath(currentIndex);
+                    } else {
+                        alert("檔案格式不正確或沒有路徑資料！");
+                    }
+                } catch (err) {
+                    alert("讀取 JSON 失敗：" + err.message);
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        prevBtn.addEventListener('click', () => {
+            if (currentIndex > 0) {
+                currentIndex--;
+                drawPath(currentIndex);
+            }
+        });
+
+        nextBtn.addEventListener('click', () => {
+            if (currentIndex < allPaths.length - 1) {
+                currentIndex++;
+                drawPath(currentIndex);
+            }
+        });
+
+        randomBtn.addEventListener('click', () => {
+            if (allPaths.length > 0) {
+                currentIndex = Math.floor(Math.random() * allPaths.length);
+                drawPath(currentIndex);
+            }
+        });
+
+        function updateButtons() {
+            const hasData = allPaths.length > 0;
+            prevBtn.disabled = !hasData || currentIndex === 0;
+            nextBtn.disabled = !hasData || currentIndex === allPaths.length - 1;
+            randomBtn.disabled = !hasData;
+        }
+
+        // 繪製路徑的核心函式
+        function drawPath(index) {
+            const path = allPaths[index];
+            if (!path) return;
+
+            pathInfo.textContent = `目前顯示：第 ${index + 1} 條 / 共 ${allPaths.length} 條`;
+            updateButtons();
+
+            // 清除畫布
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 畫淡淡的點陣背景 (輔助視覺，不用框框)
+            ctx.fillStyle = '#e0d8d0';
+            for (let r = 0; r < GRID_SIZE; r++) {
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    const x = c * CELL_SIZE + CELL_SIZE / 2;
+                    const y = r * CELL_SIZE + CELL_SIZE / 2;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            // 畫紅色的連續線條
+            ctx.beginPath();
+            ctx.strokeStyle = '#e74c3c'; 
+            ctx.lineWidth = 4;
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+
+            for (let i = 0; i < path.length; i++) {
+                const [row, col] = path[i];
+                // 計算格子中心的 X, Y 座標
+                const x = col * CELL_SIZE + CELL_SIZE / 2;
+                const y = row * CELL_SIZE + CELL_SIZE / 2;
+
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
+
+            // 標示起點 (左上角，綠色)
+            const [startRow, startCol] = path[0];
+            const startX = startCol * CELL_SIZE + CELL_SIZE / 2;
+            const startY = startRow * CELL_SIZE + CELL_SIZE / 2;
+            ctx.beginPath();
+            ctx.fillStyle = '#2ecc71'; 
+            ctx.arc(startX, startY, 8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // 標示終點 (右下角，藍色)
+            const [endRow, endCol] = path[path.length - 1];
+            const endX = endCol * CELL_SIZE + CELL_SIZE / 2;
+            const endY = endRow * CELL_SIZE + CELL_SIZE / 2;
+            ctx.beginPath();
+            ctx.fillStyle = '#3498db'; 
+            ctx.arc(endX, endY, 8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+    </script>
+</body>
+</html>

@@ -85,7 +85,7 @@
 
             if (!splashScreen) return;
 
-            // 🎬 1. 序列動畫啟動：標題 -> 作者 -> 棋盤
+            // 🎬 1. 序列動畫啟動：放慢節奏版！
             setTimeout(() => {
                 phase1.style.opacity = '0';
                 phase1.style.transform = 'translateY(-10px)';
@@ -94,21 +94,23 @@
                     phase2.style.opacity = '1';
                     phase2.style.transform = 'translateY(0)';
 
+                    // ✨ 作者名稱停留久一點 (從 1200 改為 2000)
                     setTimeout(() => {
                         phase2.style.opacity = '0';
                         phase2.style.transform = 'translateY(-10px)';
 
+                        // ✨ 棋盤浮現的過渡期稍微拉長 (從 500 改為 800)
                         setTimeout(() => {
                             phase3.style.opacity = '1';
                             phase3.style.transform = 'scale(1)';
-                            startGridAnimation(); // ✨ 2. 啟動棋盤生成與筆尖飛舞
-                        }, 500);
-                    }, 1200);
-                }, 500);
-            }, 1000);
+                            startGridAnimation(); // 啟動棋盤生成與筆尖飛舞
+                        }, 800);
+                    }, 2000);
+                }, 800);
+            }, 1500); // ✨ 一開始的標題也多停留一下 (從 1000 改為 1500)
 
             function startGridAnimation() {
-                // ✨ 3. 瞬間生成合法盤面
+                // 3. 瞬間生成合法盤面
                 function generateRandomBoard() {
                     const board = Array.from({ length: 9 }, () => Array(9).fill(0));
                     function isValid(r, c, k) {
@@ -149,19 +151,69 @@
                     }
                 }
 
-                // 5. 筆尖飛舞路徑
-                const writingPath = [
-                    [0,0], [0,1], [1,1], [1,2], [0,2], [0,3], [0,4], [1,4], [2,4],
-                    [2,5], [1,5], [0,5], [0,6], [0,7], [1,7], [2,7], [2,6], [3,6],
-                    [4,6], [4,7], [5,7], [6,7], [6,8], [5,8], [4,8], [3,8], [2,8],
-                    [1,8], [0,8], [1,0], [2,0], [2,1], [3,1], [3,0], [4,0], [5,0],
-                    [5,1], [6,1], [6,0], [7,0], [8,0], [8,1], [7,1], [7,2], [8,2],
-                    [8,3], [7,3], [7,4], [8,4], [8,5], [7,5], [7,6], [8,6], [8,7],
-                    [7,7], [7,8], [8,8]
-                ];
+                // 5. 筆尖飛舞路徑 (連貫一筆畫)
+                function generateContinuousPath() {
+                    const allPaths = [];
+                    let p1 = [];
+                    for (let r = 0; r < 9; r++) {
+                        for (let c = 0; c < 9; c++) {
+                            p1.push([r, r % 2 === 0 ? c : 8 - c]);
+                        }
+                    }
+                    allPaths.push(p1);
 
+                    let p2 = [];
+                    for (let c = 0; c < 9; c++) {
+                        for (let r = 0; r < 9; r++) {
+                            p2.push([c % 2 === 0 ? r : 8 - r, c]);
+                        }
+                    }
+                    allPaths.push(p2);
+
+                    let p3 = [];
+                    for(let c=0; c<9; c++) { 
+                        if(c%2===0) p3.push([0,c], [1,c], [2,c]);
+                        else p3.push([2,c], [1,c], [0,c]);
+                    }
+                    for(let c=8; c>=0; c--) { 
+                        if(c%2===0) p3.push([3,c], [4,c], [5,c]);
+                        else p3.push([5,c], [4,c], [3,c]);
+                    }
+                    for(let c=0; c<9; c++) { 
+                        if(c%2===0) p3.push([6,c], [7,c], [8,c]);
+                        else p3.push([8,c], [7,c], [6,c]);
+                    }
+                    allPaths.push(p3);
+
+                    let selectedPath = allPaths[Math.floor(Math.random() * allPaths.length)];
+                    if (Math.random() > 0.5) {
+                        selectedPath = selectedPath.map(pos => [pos[1], pos[0]]);
+                    }
+                    return selectedPath;
+                }
+
+                const writingPath = generateContinuousPath();
                 let currentIndex = 0;
                 const totalSteps = writingPath.length;
+
+                // 進度條「隨機跳動」的獨立機制
+                let currentProgress = 0;
+                function simulateRandomLoading() {
+                    if (currentProgress < 95) { 
+                        let jump = Math.floor(Math.random() * 8) + 2; // ✨ 配合動畫變慢，進度條每次跳動的幅度也改小一點
+                        currentProgress += jump;
+                        if (currentProgress > 95) currentProgress = 95;
+                        
+                        progressBar.style.width = `${currentProgress}%`;
+                        const progressText = document.getElementById('splash-progress-text');
+                        if (progressText) progressText.textContent = `${currentProgress}%`;
+
+                        let nextTick = Math.floor(Math.random() * 250) + 150; // ✨ 跳動間隔也拉長一點
+                        setTimeout(simulateRandomLoading, nextTick);
+                    }
+                }
+                
+                simulateRandomLoading();
 
                 function writeNextCell() {
                     if (currentIndex < totalSteps) {
@@ -175,27 +227,30 @@
                         const targetCell = document.getElementById(`splash-cell-${row * 9 + col}`);
                         if (targetCell) targetCell.classList.add('written');
 
-                        progressBar.style.width = `${((currentIndex + 1) / totalSteps) * 100}%`;
                         currentIndex++;
-
-                        setTimeout(writeNextCell, 80); // ✨ 控制寫字速度
+                        
+                        // ✨ 這裡就是控制寫字速度的地方！調成 60 毫秒，優雅又不會太久喔
+                        setTimeout(writeNextCell, 60); 
                     } else {
-                        // 🏁 6. 全部寫完，收手退場
                         progressBar.style.width = '100%';
+                        if (document.getElementById('splash-progress-text')) {
+                            document.getElementById('splash-progress-text').textContent = '100%';
+                        }
+                        
                         setTimeout(() => {
                             splashScreen.style.opacity = '0';
                             setTimeout(() => {
                                 splashScreen.style.display = 'none';
-                                // ✨ 終於顯示登入畫面
                                 if (loginScreen) loginScreen.classList.remove('hidden');
                             }, 500);
                         }, 500);
                     }
                 }
-                setTimeout(writeNextCell, 300);
+                // ✨ 棋盤出來後，稍微等一下下再開始寫字
+                setTimeout(writeNextCell, 600);
             }
         });
-    </script>
+</script>
 
   </body>
 </html>
