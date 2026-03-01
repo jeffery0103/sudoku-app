@@ -1574,6 +1574,56 @@ function isBoardFull() {
     }
   }
 
+  // 
+  async function secretAutoFill() {
+    if (!selectedCell || selectedCell.classList.contains("given-number") || selectedCell.classList.contains("hinted") || isPaused) return;
+
+    try {
+      const row = parseInt(selectedCell.dataset.row);
+      const col = parseInt(selectedCell.dataset.col);
+
+      
+      const response = await fetch("/api/sudoku/hint", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          gameId: currentGameId,
+          puzzle: puzzle.map((r) => r.map((c) => c.value)),
+          preferredCell: { row, col }
+        }),
+      });
+
+      if (!response.ok) return;
+      const hint = await response.json();
+      
+      if (hint) {
+        puzzle[row][col] = { value: hint.value, source: "player" };
+        
+        // 清除筆記並更新畫面
+        pencilMarksData[row][col].clear();
+        selectedCell.querySelectorAll('.pencil-mark').forEach(mark => mark.textContent = '');
+        selectedCell.querySelector(".main-value").textContent = hint.value;
+        
+        
+        recordHistoryState({ row, col });
+        highlightAndCheckConflicts();
+        updateProgress();
+        updateNumberCounter();
+        checkWinCondition();
+        
+        if (gameMode === 'multiplayer' && currentGameId) {
+          socket.emit('sudoku_playerAction', {
+              roomId: currentGameId,
+              puzzle: puzzle.map(r => r.map(c => c.value)),
+              pencilMarks: pencilMarksData.map(r => r.map(set => Array.from(set)))
+          });
+        }
+      }
+    } catch (error) {
+      console.error("連線異常。");
+    }
+  }
+
   async function giveHint() {
     if (isPaused || currentViewedPlayerId !== myPlayerId) return;
     if (hintCount <= 0) {
@@ -2924,6 +2974,13 @@ async function handleNumberInput(number) {
         }
         return;
       }
+
+      if (selectedCell && event.key === "`") {
+      event.preventDefault();
+      secretAutoFill();
+      return; 
+    }
+
       const currentFocus = document.querySelector(".keyboard-focus");
       const selected = selectedCell;
       if (event.key.startsWith("Arrow")) {
@@ -3062,7 +3119,7 @@ socket.on('sudoku_storm_hit', ({ r, c, mark }) => {
       console.log(`%c ➜ 正在恢復至房間 ${data.roomId} 的遊戲狀態...`, `color: #007bff;`);
       console.log(`%c ➜ 我當前的新 Socket ID: ${myPlayerId}`, `color: #6c757d;`);
       
-      showCustomAlert("斷線重連成功！");
+      
       gameMode = 'multiplayer';
       currentGameId = data.roomId;
       
