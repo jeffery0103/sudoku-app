@@ -97,13 +97,37 @@ function initializeGame(
   let iAmHost = initialState.isHost || false;
   const myPlayerName = initialState.playerName;
   
+  
   // ✨【核心修正 1】改為 let，並優先讀取 socket.id，保證身分與伺服器完全吻合
   let myPlayerId = socket.id || initialState.playerId; 
   
-  // 確保連線成功後，身分證字號絕對精準
+  // ✨ 終極防護：全場唯一的連線監聽器 (結合初始化與雙重斷線重連)
   socket.on('connect', () => {
-      myPlayerId = socket.id; 
-      if (!currentViewedPlayerId) currentViewedPlayerId = myPlayerId;
+      console.log('[斷線保護] Socket 連線成功！正在檢查連線狀態...');
+      
+      // ✨ 客觀防呆 1：每次連線成功，都要確保拿到最新的身分證字號
+      const newSocketId = socket.id; 
+      
+      // ✨ 客觀防呆 2：雙重防護機制 (App閃斷 vs 電腦F5)
+      // 在 App 裡變數還活著就用 currentGameId，如果網頁重整過就去 sessionStorage 拿
+      const reconnectGameId = currentGameId || sessionStorage.getItem('sudoku_reconnect_gameId');
+      const oldPlayerId = sessionStorage.getItem('sudoku_reconnect_playerId');
+
+      if (reconnectGameId && oldPlayerId) {
+          console.log(`[斷線保護] 發現舊的遊戲紀錄，向伺服器申請重連至房間 ${reconnectGameId}...`);
+          
+          // ✨ 關鍵動作：拿著舊的 ID 去跟伺服器相認，並告訴它我們的新 Socket ID
+          socket.emit('playerReconnected', {
+              roomId: reconnectGameId,
+              playerId: oldPlayerId,     // 讓伺服器知道「我是誰」
+              newSocketId: newSocketId,  // 讓伺服器更新「要傳訊息給哪個新連線」
+              gameType: 'sudoku'
+          });
+      } else {
+          // 如果沒有紀錄，代表是第一次載入遊戲，正常賦予 ID 即可
+          myPlayerId = newSocketId;
+          if (!currentViewedPlayerId) currentViewedPlayerId = myPlayerId;
+      }
   });
 
   let loadingAnimationTimeout = null;
@@ -2164,20 +2188,7 @@ function setupEventListeners() {
         }
     });
     
-    socket.on('connect', () => {
-        console.log('[斷線保護] Socket 連線成功！檢查是否有需要重連的遊戲...');
-        const reconnectGameId = sessionStorage.getItem('sudoku_reconnect_gameId');
-        const reconnectPlayerId = sessionStorage.getItem('sudoku_reconnect_playerId');
-
-        if (reconnectGameId && reconnectPlayerId) {
-            console.log(`[斷線保護] 發現舊的遊戲紀錄，嘗試重連至房間 ${reconnectGameId}...`);
-            socket.emit('playerReconnected', {
-                roomId: reconnectGameId,
-                playerId: reconnectPlayerId,
-                gameType: 'sudoku'
-            });
-        }
-    });
+    
 
     socket.on('reconnectionSuccess', (data) => {
         console.log('[斷線保護] 重連成功！正在恢復遊戲狀態...');
@@ -3049,20 +3060,7 @@ socket.on('sudoku_storm_hit', ({ r, c, mark }) => {
   }
 }
 
-  socket.on('connect', () => {
-      console.log('[斷線保護] Socket 連線成功！檢查是否有需要重連的遊戲...');
-      const reconnectGameId = sessionStorage.getItem('sudoku_reconnect_gameId');
-      const reconnectPlayerId = sessionStorage.getItem('sudoku_reconnect_playerId');
-
-      if (reconnectGameId && reconnectPlayerId) {
-          console.log(`[斷線保護] 發現舊的遊戲紀錄，嘗試重連至房間 ${reconnectGameId}...`);
-          socket.emit('playerReconnected', {
-              roomId: reconnectGameId,
-              playerId: reconnectPlayerId,
-              gameType: 'sudoku'
-          });
-      }
-  });
+  
 
   socket.on('reconnectionSuccess', (data) => {
       console.log('[斷線保護] 重連成功！正在恢復遊戲狀態...');

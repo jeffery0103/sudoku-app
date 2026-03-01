@@ -318,7 +318,12 @@ button,
     transform-origin: bottom left; margin-top: -30px; margin-left: -5px;
     animation: penWritingShaking 0.3s ease-in-out infinite;
     transition: left 0.08s linear, top 0.08s linear; 
+    
+    /* ✨ 新增這兩行：強制畫筆的初始出生點就在第一格的正中心 (100 / 18 = 5.55%) */
+    left: 5.55%; 
+    top: 5.55%;
 }
+
 @keyframes penWritingShaking { 0% { transform: rotate(0deg); } 50% { transform: rotate(-15deg); } 100% { transform: rotate(0deg); } }
 
 /* ✨ 讓標題支援平滑的漸變動畫 */
