@@ -1574,8 +1574,6 @@ function isBoardFull() {
     }
   }
 
-  // 
-  // 🤫 開發者專屬後門：無痕自動填入正確答案
   async function secretAutoFill() {
     if (!selectedCell || selectedCell.classList.contains("given-number") || selectedCell.classList.contains("hinted") || isPaused) return;
 
@@ -1583,7 +1581,7 @@ function isBoardFull() {
       const row = parseInt(selectedCell.dataset.row);
       const col = parseInt(selectedCell.dataset.col);
 
-      // 偷偷向伺服器要這一格的答案
+      // 偷偷向伺服器要答案 (優先要你選的那格，如果那格對了，伺服器會給別格)
       const response = await fetch("/api/sudoku/hint", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1598,16 +1596,23 @@ function isBoardFull() {
       const hint = await response.json();
       
       if (hint) {
-        // ✨ 核心偽裝：將 source 標記為 "player"，假裝是你自己按的
-        puzzle[row][col] = { value: hint.value, source: "player" };
+        // ✨ 核心修正：讀取伺服器真正回傳的目標座標 (targetRow, targetCol)
+        const targetRow = hint.row;
+        const targetCol = hint.col;
         
-        // 清除筆記並更新畫面
-        pencilMarksData[row][col].clear();
-        selectedCell.querySelectorAll('.pencil-mark').forEach(mark => mark.textContent = '');
-        selectedCell.querySelector(".main-value").textContent = hint.value;
+        // 將數值更新到正確的座標上
+        puzzle[targetRow][targetCol] = { value: hint.value, source: "player" };
+        pencilMarksData[targetRow][targetCol].clear();
         
-        // 觸發正常遊戲邏輯，讓對手看到你的「神操作」
-        recordHistoryState({ row, col });
+        // 抓出真正該被填寫的那一個 DOM 元素來更新畫面
+        const targetCell = document.querySelector(`.cell[data-row='${targetRow}'][data-col='${targetCol}']`);
+        if (targetCell) {
+            targetCell.querySelectorAll('.pencil-mark').forEach(mark => mark.textContent = '');
+            targetCell.querySelector(".main-value").textContent = hint.value;
+        }
+        
+        // 觸發正常遊戲邏輯
+        recordHistoryState({ row: targetRow, col: targetCol });
         highlightAndCheckConflicts();
         updateProgress();
         updateNumberCounter();
