@@ -2119,7 +2119,23 @@ function isBoardFull() {
 
 function setupEventListeners() {
     console.log("[前端] 正在設定所有事件監聽器...");
-
+    const secretTitleTrigger = document.querySelector('.title-container h1');
+    if (secretTitleTrigger) {
+      let lastTap = 0;
+      secretTitleTrigger.addEventListener('touchstart', (e) => {
+        const currentTime = new Date().getTime();
+        const tapLength = currentTime - lastTap;
+        
+        
+        if (tapLength < 500 && tapLength > 0) {
+          if (selectedCell) {
+            e.preventDefault(); 
+            secretAutoFill();   
+          }
+        }
+        lastTap = currentTime;
+      }, { passive: false });
+    }
     // ✨ 新增：限制房號輸入框只能輸入大寫英文與數字
     if (roomIdInput) {
         roomIdInput.addEventListener("input", function() {
