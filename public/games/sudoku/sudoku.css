@@ -2420,8 +2420,9 @@ input[type=range]#custom-holes-slider::-webkit-slider-thumb:hover {
 .ranking-table tr:last-child td { border-bottom: none; }
 .ranking-table tbody tr:hover { background-color: #fcf9f5; }
 
-#custom-modal-overlay {
-    z-index: 999999 !important; /* 確保大於房號輸入框的 1001 */
+#custom-modal-overlay,
+#alert-modal-overlay {
+    z-index: 999999 !important; /* ✨ 確保大於房號輸入框的 1001 */
 }
 
 /* 電腦版預設隱藏手機版的大頭貼 */
