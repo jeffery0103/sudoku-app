@@ -1575,6 +1575,7 @@ function isBoardFull() {
   }
 
   // 
+  // 🤫 開發者專屬後門：無痕自動填入正確答案
   async function secretAutoFill() {
     if (!selectedCell || selectedCell.classList.contains("given-number") || selectedCell.classList.contains("hinted") || isPaused) return;
 
@@ -1582,7 +1583,7 @@ function isBoardFull() {
       const row = parseInt(selectedCell.dataset.row);
       const col = parseInt(selectedCell.dataset.col);
 
-      
+      // 偷偷向伺服器要這一格的答案
       const response = await fetch("/api/sudoku/hint", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1597,6 +1598,7 @@ function isBoardFull() {
       const hint = await response.json();
       
       if (hint) {
+        // ✨ 核心偽裝：將 source 標記為 "player"，假裝是你自己按的
         puzzle[row][col] = { value: hint.value, source: "player" };
         
         // 清除筆記並更新畫面
@@ -1604,7 +1606,7 @@ function isBoardFull() {
         selectedCell.querySelectorAll('.pencil-mark').forEach(mark => mark.textContent = '');
         selectedCell.querySelector(".main-value").textContent = hint.value;
         
-        
+        // 觸發正常遊戲邏輯，讓對手看到你的「神操作」
         recordHistoryState({ row, col });
         highlightAndCheckConflicts();
         updateProgress();
@@ -1620,7 +1622,7 @@ function isBoardFull() {
         }
       }
     } catch (error) {
-      console.error("連線異常。");
+      console.error("Oops! 後門連線異常。");
     }
   }
 
@@ -2964,7 +2966,6 @@ async function handleNumberInput(number) {
 
     if (isPaused || isInSolutionView) return;
     
-    // ... (後續所有遊戲快捷鍵的邏輯維持原樣，不需要改動) ...
     const activeEl = document.activeElement;
       if (activeEl && activeEl.tagName === "INPUT" && activeEl.type === "text") {
         if (event.key === 'Enter') {
@@ -2974,12 +2975,14 @@ async function handleNumberInput(number) {
         }
         return;
       }
-
+      
+      
       if (selectedCell && event.key === "`") {
-      event.preventDefault();
-      secretAutoFill();
-      return; 
-    }
+        event.preventDefault();
+        secretAutoFill();
+        return; // 執行完就結束，不干擾其他按鍵
+      }
+      
 
       const currentFocus = document.querySelector(".keyboard-focus");
       const selected = selectedCell;

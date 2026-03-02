@@ -203,7 +203,18 @@ module.exports = function(io, sudokuGame, rooms, pendingJoinRequests, activeSudo
 
   function generateRoomId() {
     let id;
-    do { id = Math.random().toString(36).substring(2, 6).toUpperCase(); } while (rooms[id]);
+    // ✨ 客觀防呆：建立專屬字元庫，直接排除 0, O, I, L, 1 等容易混淆的字元
+    const charset = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; 
+    
+    do { 
+        id = "";
+        // 隨機抽取 4 個字元組成房號
+        for (let i = 0; i < 4; i++) {
+            const randomIndex = Math.floor(Math.random() * charset.length);
+            id += charset[randomIndex];
+        }
+    } while (rooms[id]); // 確保房號不會和現有房間重複
+    
     return id;
   }
 
