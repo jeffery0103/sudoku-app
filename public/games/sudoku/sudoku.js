@@ -1574,14 +1574,20 @@ function isBoardFull() {
     }
   }
 
+  // ✨ 宣告一個外掛專用的防呆鎖
+  let isSecretFilling = false; 
+
+  // 🤫 開發者專屬後門：無痕自動填入正確答案 (升級版)
   async function secretAutoFill() {
-    if (!selectedCell || selectedCell.classList.contains("given-number") || selectedCell.classList.contains("hinted") || isPaused) return;
+    // ✨ 如果已經在填寫中了，或是條件不符，就直接擋掉！
+    if (isSecretFilling || !selectedCell || selectedCell.classList.contains("given-number") || selectedCell.classList.contains("hinted") || isPaused) return;
+
+    isSecretFilling = true; // 🔒 上鎖！在伺服器回傳前，誰都不准再觸發！
 
     try {
       const row = parseInt(selectedCell.dataset.row);
       const col = parseInt(selectedCell.dataset.col);
 
-      // 偷偷向伺服器要答案 (優先要你選的那格，如果那格對了，伺服器會給別格)
       const response = await fetch("/api/sudoku/hint", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1592,26 +1598,22 @@ function isBoardFull() {
         }),
       });
 
-      if (!response.ok) return;
+      if (!response.ok) throw new Error("API 異常");
       const hint = await response.json();
       
       if (hint) {
-        // ✨ 核心修正：讀取伺服器真正回傳的目標座標 (targetRow, targetCol)
         const targetRow = hint.row;
         const targetCol = hint.col;
         
-        // 將數值更新到正確的座標上
         puzzle[targetRow][targetCol] = { value: hint.value, source: "player" };
         pencilMarksData[targetRow][targetCol].clear();
         
-        // 抓出真正該被填寫的那一個 DOM 元素來更新畫面
         const targetCell = document.querySelector(`.cell[data-row='${targetRow}'][data-col='${targetCol}']`);
         if (targetCell) {
             targetCell.querySelectorAll('.pencil-mark').forEach(mark => mark.textContent = '');
             targetCell.querySelector(".main-value").textContent = hint.value;
         }
         
-        // 觸發正常遊戲邏輯
         recordHistoryState({ row: targetRow, col: targetCol });
         highlightAndCheckConflicts();
         updateProgress();
@@ -1628,6 +1630,8 @@ function isBoardFull() {
       }
     } catch (error) {
       console.error("Oops! 後門連線異常。");
+    } finally {
+      isSecretFilling = false; // 🔓 解鎖！無論成功或失敗，執行完一定會把鎖打開
     }
   }
 
@@ -2124,6 +2128,8 @@ function isBoardFull() {
 
 function setupEventListeners() {
     console.log("[前端] 正在設定所有事件監聽器...");
+
+    // 🤫 手機版開發者專屬後門：雙擊遊戲標題觸發神蹟
     const secretTitleTrigger = document.querySelector('.title-container h1');
     if (secretTitleTrigger) {
       let lastTap = 0;
@@ -2131,14 +2137,15 @@ function setupEventListeners() {
         const currentTime = new Date().getTime();
         const tapLength = currentTime - lastTap;
         
-        
         if (tapLength < 500 && tapLength > 0) {
           if (selectedCell) {
             e.preventDefault(); 
+            lastTap = 0; // ✨ 核心防呆：成功觸發後立刻歸零記憶！強迫你必須重新「完整點兩下」才算數
             secretAutoFill();   
           }
+        } else {
+          lastTap = currentTime; // ✨ 只有在沒觸發雙擊時，才更新最後點擊時間
         }
-        lastTap = currentTime;
       }, { passive: false });
     }
     // ✨ 新增：限制房號輸入框只能輸入大寫英文與數字
