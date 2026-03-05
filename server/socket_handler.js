@@ -338,7 +338,7 @@ module.exports = function(io, sudokuGame, rooms, pendingJoinRequests, activeSudo
             return socket.emit('joinRoomResult', { success: false, message: '此房間遊戲已經開始或不存在。' });
         }
         // 3. 檢查人數上限 (假設最多 4 人，可自行修改)
-        if (room.players.length >= 4) {
+        if (room.players.length >= 10) {
             return socket.emit('joinRoomResult', { success: false, message: '此房間已滿' });
         }
 
