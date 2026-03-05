@@ -821,7 +821,7 @@ module.exports = function(io, sudokuGame, rooms, pendingJoinRequests, activeSudo
                             } 
                             delete gracefulDisconnects[disconnectedPlayer.id];
                         }
-                    }, 30000);
+                    }, 100000);
 
                     gracefulDisconnects[disconnectedPlayer.id] = { timer: timerId, roomId: roomId, socketId: socket.id };
 
