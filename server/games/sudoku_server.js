@@ -35,29 +35,26 @@ function solveSudoku(board, check) {
 
 function countSolutions(board, check) {
   let count = 0;
-  function solve(t) {
-    if(t == 81) {
+  function solve(r, c) {
+    if (c == 9) r++, c = 0;
+    if (r == 9) {
       count++;
       return;
     }
-    for (let i = Math.floor(t / 9), X = t; i < 9; i++) {
-      for (let j = X % 9; j < 9; j++, X++) {
-        if (board[i][j] == 0) {
-          for (let k = 1; k <= 9; k++) {
-            if (isValid(check, i, j, k)) {
-              board[i][j] = k;
-              solve(X + 1);
-              board[i][j] = 0;
-              check[0][i][k] = check[1][j][k] = check[2][3 * Math.floor(i / 3) + Math.floor(j / 3)][k] = 0;
-            }
-            if(count >= 2) return;
-          }
-          return;
+    if(board[r][c] != 0) solve(r, c + 1);
+    else {
+      for (let k = 1; k <= 9; k++) {
+        if (isValid(check, r, c, k)) {
+          board[r][c] = k;
+          solve(r, c + 1);
+          board[r][c] = 0;
+          check[0][r][k] = check[1][c][k] = check[2][3 * Math.floor(r / 3) + Math.floor(c / 3)][k] = 0;
         }
+        if(count >= 2) return;
       }
     }
   }
-  solve(0);
+  solve(0, 0);
   return count;
 }
 
