@@ -6,7 +6,7 @@ const sudokuGame = require('./sudoku_server.js');
 // ✨ 1. 將 onProgress 放入接收參數中，讓外部可以傳遞回報函數
 function generatePuzzleParallel(difficulty, customHoles = null, onProgress = () => {}) {
   const onDispatch = () => {};
-  const isExtreme = difficulty === 'extreme' || customHoles >= 61;
+  const isExtreme = difficulty === 'extreme' || customHoles >= 58;
 
   if (!isExtreme) {
     return new Promise((resolve) => {
@@ -15,7 +15,7 @@ function generatePuzzleParallel(difficulty, customHoles = null, onProgress = () 
         switch (difficulty) {
             case 'easy':   targetHoles = 40; break; 
             case 'medium': targetHoles = 50; break; 
-            case 'hard':   targetHoles = 60; break; 
+            case 'hard':   targetHoles = 57; break; 
         }
         if (customHoles) targetHoles = customHoles;
 
@@ -102,7 +102,7 @@ function generatePuzzleParallel(difficulty, customHoles = null, onProgress = () 
           runsWithoutImprovement++; // ✨ 沒進步，耐心值 +1
         }
         
-        const targetHolesForSprint = customHoles ? Math.min(customHoles, 60) : 60;
+        const targetHolesForSprint = customHoles ? Math.min(customHoles, 57) : 57;
 
         // 2. ✨ 核心修改：如果達到目標洞數，或者「連續 50 次沒進步」，就提早進入最後衝刺！
         if (!foundGoodPuzzle && (bestResult.holes >= targetHolesForSprint || runsWithoutImprovement >= 50)) {
@@ -114,7 +114,7 @@ function generatePuzzleParallel(difficulty, customHoles = null, onProgress = () 
             tasksCompletedWhenFound = completedTasks;
             progressWhenFound = Math.floor((completedTasks / 1000) * 100);
             
-        
+            // ✨ 瞬間把 1000 次的上限砍掉，改成「目前次數 + 50次衝刺」
             totalAttempts = completedTasks + SPRINT_RUNS_AFTER_GOOD_PUZZLE;
         }
 
