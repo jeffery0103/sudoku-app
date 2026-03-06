@@ -6,7 +6,7 @@ const sudokuGame = require('./sudoku_server.js');
 // ✨ 1. 將 onProgress 放入接收參數中，讓外部可以傳遞回報函數
 function generatePuzzleParallel(difficulty, customHoles = null, onProgress = () => {}) {
   const onDispatch = () => {};
-  const isExtreme = difficulty === 'extreme' || customHoles >= 58;
+  const isExtreme = difficulty === 'extreme' || customHoles >= 61;
 
   if (!isExtreme) {
     return new Promise((resolve) => {
