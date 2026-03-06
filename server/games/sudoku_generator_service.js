@@ -102,7 +102,7 @@ function generatePuzzleParallel(difficulty, customHoles = null, onProgress = () 
           runsWithoutImprovement++; // ✨ 沒進步，耐心值 +1
         }
         
-        const targetHolesForSprint = customHoles ? Math.min(customHoles, 57) : 57;
+        const targetHolesForSprint = customHoles ? Math.min(customHoles, 60) : 60;
 
         // 2. ✨ 核心修改：如果達到目標洞數，或者「連續 50 次沒進步」，就提早進入最後衝刺！
         if (!foundGoodPuzzle && (bestResult.holes >= targetHolesForSprint || runsWithoutImprovement >= 50)) {
