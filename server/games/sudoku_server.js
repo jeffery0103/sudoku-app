@@ -33,17 +33,18 @@ function solveSudoku(board, check) {
   return true;
 }
 
-function countSolutions(board) {
+function countSolutions(board, check) {
   let count = 0;
   function solve() {
     for (let i = 0; i < 9; i++) {
       for (let j = 0; j < 9; j++) {
         if (board[i][j] == 0) {
           for (let k = 1; k <= 9; k++) {
-            if (isValid(board, i, j, k)) {
+            if (isValid(check, i, j, k)) {
               board[i][j] = k;
               if (count < 2) solve();
               board[i][j] = 0;
+              check[0][i][k] = check[1][j][k] = check[2][3 * Math.floor(i / 3) + Math.floor(j / 3)][k] = 0;
             }
           }
           return;
@@ -163,14 +164,17 @@ function digToTargetWithOptionalBlackout(solvedBoard, targetHoles) {
   }
 
   // 執行挖洞 (維持不變)
+  const deep_check = Array(3).fill().map(() => Array(9).fill().map(() => Array(10).fill(1)));
   for (const cellIndex of cellsToTry) {
     if (removedCount >= targetHoles) break;
     const row = Math.floor(cellIndex / 9), col = cellIndex % 9;
     if (puzzle[row][col] === 0) continue;
     const originalValue = puzzle[row][col];
     puzzle[row][col] = 0;
-    if (countSolutions(puzzle.map(r => [...r])) !== 1) {
+    deep_check[0][row][originalValue] = deep_check[1][col][originalValue] = deep_check[2][3 * Math.floor(row / 3) + Math.floor(col / 3)][originalValue] = 0;
+    if (countSolutions(puzzle.map(r => [...r]), deep_check.map(r => [...r])) !== 1) {
       puzzle[row][col] = originalValue;
+      deep_check[0][row][originalValue] = deep_check[1][col][originalValue] = deep_check[2][3 * Math.floor(row / 3) + Math.floor(col / 3)][originalValue] = 1;
     } else {
       removedCount++;
     }
