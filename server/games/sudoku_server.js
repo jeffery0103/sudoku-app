@@ -40,7 +40,7 @@ function countSolutions(board, check) {
       count++;
       return;
     }
-    for (let i = t / 9, X = t; i < 9; i++) {
+    for (let i = Math.floor(t / 9), X = t; i < 9; i++) {
       for (let j = X % 9; j < 9; j++, X++) {
         if (board[i][j] == 0) {
           for (let k = 1; k <= 9; k++) {
@@ -52,6 +52,7 @@ function countSolutions(board, check) {
             }
             if(count == 2) return;
           }
+          break;
         }
       }
     }
