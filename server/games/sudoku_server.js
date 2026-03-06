@@ -50,9 +50,9 @@ function countSolutions(board, check) {
               board[i][j] = 0;
               check[0][i][k] = check[1][j][k] = check[2][3 * Math.floor(i / 3) + Math.floor(j / 3)][k] = 0;
             }
-            if(count == 2) return;
+            if(count >= 2) return;
           }
-          break;
+          return;
         }
       }
     }
