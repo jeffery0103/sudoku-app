@@ -15,7 +15,7 @@ function generatePuzzleParallel(difficulty, customHoles = null, onProgress = () 
         switch (difficulty) {
             case 'easy':   targetHoles = 40; break; 
             case 'medium': targetHoles = 50; break; 
-            case 'hard':   targetHoles = 57; break; 
+            case 'hard':   targetHoles = 60; break; 
         }
         if (customHoles) targetHoles = customHoles;
 
