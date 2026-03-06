@@ -22,7 +22,10 @@ function solveSudoku(board, check) {
           if (isValid(check, i, j, k)) {
             board[i][j] = k;
             if (solveSudoku(board, check)) return true;
-            else board[i][j] = 0;
+            else {
+              board[i][j] = 0;
+              check[0][i][k] = check[1][j][k] = check[2][3 * Math.floor(i / 3) + Math.floor(j / 3)][k] = 0;
+            }
           }
         }
         return false;
