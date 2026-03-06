@@ -172,7 +172,7 @@ function digToTargetWithOptionalBlackout(solvedBoard, targetHoles) {
     const originalValue = puzzle[row][col];
     puzzle[row][col] = 0;
     deep_check[0][row][originalValue] = deep_check[1][col][originalValue] = deep_check[2][3 * Math.floor(row / 3) + Math.floor(col / 3)][originalValue] = 0;
-    if (countSolutions(puzzle.map(r => [...r]), deep_check.map(r => [...r])) !== 1) {
+    if (countSolutions(puzzle, deep_check) !== 1) {
       puzzle[row][col] = originalValue;
       deep_check[0][row][originalValue] = deep_check[1][col][originalValue] = deep_check[2][3 * Math.floor(row / 3) + Math.floor(col / 3)][originalValue] = 1;
     } else {
