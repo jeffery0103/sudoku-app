@@ -114,7 +114,7 @@ function generatePuzzleParallel(difficulty, customHoles = null, onProgress = () 
             tasksCompletedWhenFound = completedTasks;
             progressWhenFound = Math.floor((completedTasks / 1000) * 100);
             
-            // ✨ 瞬間把 1000 次的上限砍掉，改成「目前次數 + 50次衝刺」
+        
             totalAttempts = completedTasks + SPRINT_RUNS_AFTER_GOOD_PUZZLE;
         }
 

@@ -1,23 +1,27 @@
-function isValid(board, row, col, k) {
-  for (let i = 0; i < 9; i++) {
+function isValid(check, row, col, k) {
+  if (check[0][row][k] || check[1][col][k] || check[2][3 * Math.floor(row / 3) + Math.floor(col / 3)][k]) {
+    return false;
+  }
+  check[0][row][k] = check[1][col][k] = check[2][3 * Math.floor(row / 3) + Math.floor(col / 3)][k] = 1;
+  /*for (let i = 0; i < 9; i++) {
     const m = 3 * Math.floor(row / 3) + Math.floor(i / 3);
     const n = 3 * Math.floor(col / 3) + (i % 3);
     if (board[row][i] == k || board[i][col] == k || board[m][n] == k) {
       return false;
     }
-  }
+  }*/
   return true;
 }
 
-function solveSudoku(board) {
+function solveSudoku(board, check) {
   for (let i = 0; i < 9; i++) {
     for (let j = 0; j < 9; j++) {
       if (board[i][j] == 0) {
         let numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9].sort(() => Math.random() - 0.5);
         for (let k of numbers) {
-          if (isValid(board, i, j, k)) {
+          if (isValid(check, i, j, k)) {
             board[i][j] = k;
-            if (solveSudoku(board)) return true;
+            if (solveSudoku(board, check)) return true;
             else board[i][j] = 0;
           }
         }
@@ -53,7 +57,8 @@ function countSolutions(board) {
 
 function generateSolvedBoard() {
   const board = Array(9).fill().map(() => Array(9).fill(0));
-  solveSudoku(board);
+  const check = Array(3).fill().map(() => Array(9).fill().map(() => Array(10).fill(0)));
+  solveSudoku(board, check);
   return board;
 }
 
