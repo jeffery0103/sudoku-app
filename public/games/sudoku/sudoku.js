@@ -1185,20 +1185,48 @@ function isBoardFull() {
     stopTimer();
     disableGameControls(true, ['game-menu-btn']);
     
+    // ==========================================
+    // ⚔️ 多人模式專屬邏輯 (攔截防護)
+    // ==========================================
+    if (gameMode === 'multiplayer') {
+        const othersPlaying = opponentStates.some(p => p.playerId !== myPlayerId && p.status === 'playing');
+
+        // ✨ 煙火照放，慶祝通關！
+        if (typeof confetti === "function") confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } });
+
+        if (othersPlaying) {
+            // 情況 A：還有人在玩。隱藏彈窗，並跳出觀戰通知
+            if (winModalNewGameBtn) winModalNewGameBtn.classList.add("hidden");
+            if (winModalExtremeBtn) winModalExtremeBtn.classList.add("hidden");
+            if (exitRoomBtn) exitRoomBtn.classList.add("hidden");
+            if (winModalOverlay) winModalOverlay.classList.add("hidden");
+            
+            showCustomAlert("恭喜通關！🎉<br>還有其他對手正在努力中，您可以點擊右下角的進度條切換視角進行觀戰喔！", "通關成功");
+        } else {
+            // 情況 B：沒人在玩了（我是最後一個）。
+            // 🛑 核心防護：什麼都不要做！把 HTML 與彈窗控制權全部讓給 sudoku_gameOver 廣播！
+        }
+        
+        return; // ⚠️ 多人模式到此結束，絕對不執行下方的單人邏輯
+    }
+
+    // ==========================================
+    // 👤 以下全部都是「單人模式」專屬邏輯
+    // ==========================================
     const winTitle = document.getElementById('win-modal-title');
     const winSubtitle = document.getElementById('win-modal-subtitle');
     if (winTitle) winTitle.textContent = "恭喜通關！";
     if (winSubtitle) winSubtitle.classList.remove("hidden");
 
-    const difficultyMap = { 'easy': '簡單', 'medium': '中等', 'hard': '困難' }; 
+    const difficultyMap = { 'easy': '簡單', 'medium': '中等', 'hard': '困難', 'extreme': '極限' }; 
     const difficultyText = difficultyMap[gameSettings.difficulty] || '未知';
     const finalTime = timerValueElement ? timerValueElement.textContent : '未知';
-    const initialHintCount = { 'easy': 5, 'medium': 3, 'hard': 1 }[gameSettings.difficulty] || 0;
-    const initialValidateCount = { 'easy': 5, 'medium': 3, 'hard': 1 }[gameSettings.difficulty] || 0;
+    const initialHintCount = { 'easy': 5, 'medium': 3, 'hard': 1, 'extreme': 0 }[gameSettings.difficulty] || 0;
+    const initialValidateCount = { 'easy': 5, 'medium': 3, 'hard': 1, 'extreme': 0 }[gameSettings.difficulty] || 0;
     const hintsUsed = initialHintCount - hintCount;
     const validationsUsed = initialValidateCount - validateCount;
 
-    // 重建個人數據 HTML
+    // 這裡才把單人數據塞進去，保證不會蓋掉多人的排行榜！
     const winStatContainer = document.getElementById('win-stats-container');
     if (winStatContainer) {
         winStatContainer.innerHTML = `
@@ -1213,53 +1241,28 @@ function isBoardFull() {
     const winModalExtremeBtn = document.getElementById('win-modal-extreme-challenge-btn');
     const exitRoomBtn = document.getElementById('win-modal-exit-room-btn');
 
-    if (gameMode === 'multiplayer') {
-        // ✨ 多人模式：隱藏再來一局，顯示觀戰與退出房間
-        if (winModalNewGameBtn) winModalNewGameBtn.classList.add("hidden");
-        if (exitRoomBtn) {
-            exitRoomBtn.classList.remove("hidden");
-            exitRoomBtn.onclick = () => {
-                socket.emit("leaveRoom", { roomId: currentGameId });
-                resetToModeSelection();
-            };
-        }
-        if (winModalExtremeBtn) {
-            winModalExtremeBtn.textContent = "繼續觀戰 👀";
-            winModalExtremeBtn.classList.remove("hidden");
-            winModalExtremeBtn.onclick = () => {
-                winModalOverlay.classList.add("hidden");
-                showCustomAlert("點擊右下角玩家進度條即可觀看他們的最終盤面！");
-            };
-        }
-    } else {
-        // ✨ 單人模式：顯示「再來一局」與「返回主選單」
-        if (winModalNewGameBtn) {
-            winModalNewGameBtn.classList.remove("hidden");
-            winModalNewGameBtn.textContent = "再來一局";
-            winModalNewGameBtn.onclick = () => {
-                // 改用標準的 leaveRoom 來徹底清理伺服器上的單人房間
-                socket.emit("leaveRoom", { roomId: currentGameId }); 
-                resetUIForNewGame();
-                winModalOverlay.classList.add("hidden");
-                appContainer.classList.add("hidden");
-                // 直接跳出難度選擇，讓玩家無縫開下一局
-                difficultyModalOverlay.classList.remove("hidden");
-            };
-        }
-        
-        // ✨ 核心修復：把原本隱藏的退出按鈕打開，並賦予「返回主選單」的功能
-        if (exitRoomBtn) {
-            exitRoomBtn.classList.remove("hidden");
-            exitRoomBtn.textContent = "返回主選單"; 
-            exitRoomBtn.onclick = () => {
-                // 退出房間並徹底重置回最初的模式選擇畫面
-                socket.emit("leaveRoom", { roomId: currentGameId }); 
-                resetToModeSelection(); 
-            };
-        }
-        
-        if (winModalExtremeBtn) winModalExtremeBtn.classList.add("hidden");
+    if (winModalNewGameBtn) {
+        winModalNewGameBtn.classList.remove("hidden");
+        winModalNewGameBtn.textContent = "再來一局";
+        winModalNewGameBtn.onclick = () => {
+            socket.emit("leaveRoom", { roomId: currentGameId }); 
+            resetUIForNewGame();
+            winModalOverlay.classList.add("hidden");
+            appContainer.classList.add("hidden");
+            difficultyModalOverlay.classList.remove("hidden");
+        };
     }
+    
+    if (exitRoomBtn) {
+        exitRoomBtn.classList.remove("hidden");
+        exitRoomBtn.textContent = "返回主選單"; 
+        exitRoomBtn.onclick = () => {
+            socket.emit("leaveRoom", { roomId: currentGameId }); 
+            resetToModeSelection(); 
+        };
+    }
+    
+    if (winModalExtremeBtn) winModalExtremeBtn.classList.add("hidden");
 
     if (winModalOverlay) winModalOverlay.classList.remove("hidden");
     if (typeof confetti === "function") confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } });

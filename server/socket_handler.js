@@ -621,7 +621,7 @@ module.exports = function(io, sudokuGame, rooms, pendingJoinRequests, activeSudo
             }
         });
 
-        if (isBoardFull(puzzle) && isBoardCorrect(puzzle, room.gameState.solution)) {
+        if (isBoardFull(puzzle) && isBoardCorrect(puzzle, room.secretSolution)) {
             playerState.status = 'finished';
             playerState.finishTime = room.gameState.seconds;
 
