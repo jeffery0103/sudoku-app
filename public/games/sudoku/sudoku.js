@@ -1092,9 +1092,9 @@ function isBoardFull() {
     }
 
     const keybindingsInfoHTML = `
-      <div class="keybindings-info" style="margin-top: 20px; padding-top: 15px; border-top: 2px solid #d8d8d8; text-align: left;">
-        <h4 style="margin: 0 0 10px 0; color: var(--theme-color-dark);">⌨️ 快捷鍵說明</h4>
-        <div style="display: grid; grid-template-columns: max-content 1fr; gap: 6px 15px; font-size: 0.95em; color: #555; line-height: 1.5;">
+      <div class="keybindings-info" style="margin-top: clamp(5px, 2vh, 20px); padding-top: clamp(5px, 1.5vh, 15px); border-top: 2px solid #d8d8d8; text-align: left;">
+        <h4 style="margin: 0 0 clamp(2px, 1vh, 10px) 0; color: var(--theme-color-dark); font-size: clamp(0.85rem, 2vh, 1.1rem);">⌨️ 快捷鍵說明</h4>
+        <div style="display: grid; grid-template-columns: max-content 1fr; gap: clamp(2px, 0.8vh, 6px) 15px; font-size: clamp(0.7rem, 1.8vh, 0.95em); color: #555; line-height: clamp(1.2, 2.5vh, 1.5);">
           <span>填寫 / 筆記：</span><span>1~9</span>
           <span>清除格子：</span><span>&lt;-- / Del</span>
           <span>切換筆記模式：</span><span>P / 中鍵</span>
@@ -1105,16 +1105,24 @@ function isBoardFull() {
     `;
 
     const gameInfoHTML = `
-      <div class="info-item"><span>剩餘提示:</span><span id="info-hint-count-display">${hintCount}</span></div>
-      <div class="info-item"><span>剩餘檢查:</span><span id="info-validate-count-display">${validateCount}</span></div>
-      <div class="info-item"><span>剩餘暫停:</span><span id="info-pause-count-display">2</span></div>
-      
-      <hr style="margin: 10px 0; border: none; height: 2px; background-color: #d8d8d8;">
-      
-      <div class="info-item-column"><h4>當前難度</h4><p>${difficultyText} (${holes} 空格)</p></div>
-      <div class="info-item-column"><h4>輔助功能</h4><p>${helpersText}</p></div>
-      
-      ${keybindingsInfoHTML}
+      <div class="info-item-wrapper" style="display: flex; flex-direction: column; height: 100%; justify-content: space-evenly;">
+          <div class="info-item" style="font-size: clamp(0.8rem, 2vh, 1rem);"><span>剩餘提示:</span><span id="info-hint-count-display">${hintCount}</span></div>
+          <div class="info-item" style="font-size: clamp(0.8rem, 2vh, 1rem);"><span>剩餘檢查:</span><span id="info-validate-count-display">${validateCount}</span></div>
+          <div class="info-item" style="font-size: clamp(0.8rem, 2vh, 1rem);"><span>剩餘暫停:</span><span id="info-pause-count-display">2</span></div>
+          
+          <hr style="margin: clamp(5px, 1.5vh, 10px) 0; border: none; height: 2px; background-color: #d8d8d8;">
+          
+          <div class="info-item-column">
+              <h4 style="margin: 0 0 2px 0; font-size: clamp(0.85rem, 2vh, 1.05rem);">當前難度</h4>
+              <p style="margin: 0 0 clamp(2px, 1vh, 8px) 0; font-size: clamp(0.8rem, 1.9vh, 1rem); color: #555;">${difficultyText} (${holes} 空格)</p>
+          </div>
+          <div class="info-item-column">
+              <h4 style="margin: 0 0 2px 0; font-size: clamp(0.85rem, 2vh, 1.05rem);">輔助功能</h4>
+              <p style="margin: 0; font-size: clamp(0.8rem, 1.9vh, 1rem); color: #555;">${helpersText}</p>
+          </div>
+          
+          ${keybindingsInfoHTML}
+      </div>
     `;
 
     if (singlePlayerInfoPanel) {

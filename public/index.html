@@ -179,54 +179,6 @@
                 let currentIndex = 0;
                 const totalSteps = writingPath.length;
 
-                // 進度條「隨機跳動」的獨立機制
-                let currentProgress = 0;
-                function simulateRandomLoading() {
-                    if (currentProgress < 95) { 
-                        let jump = Math.floor(Math.random() * 8) + 2;
-                        currentProgress += jump;
-                        if (currentProgress > 95) currentProgress = 95;
-                        
-                        progressBar.style.width = `${currentProgress}%`;
-                        const progressText = document.getElementById('splash-progress-text');
-                        if (progressText) progressText.textContent = `${currentProgress}%`;
-
-                        let nextTick = Math.floor(Math.random() * 250) + 150;
-                        setTimeout(simulateRandomLoading, nextTick);
-                    }
-                }
-                simulateRandomLoading();
-
-                function writeNextCell() {
-                    if (currentIndex < totalSteps) {
-                        const [row, col] = writingPath[currentIndex];
-                        const targetX = col * (100 / 9) + (100 / 18);
-                        const targetY = row * (100 / 9) + (100 / 18);
-
-                        pen.style.left = `${targetX}%`;
-                        pen.style.top = `${targetY}%`;
-
-                        const targetCell = document.getElementById(`splash-cell-${row * 9 + col}`);
-                        if (targetCell) targetCell.classList.add('written');
-
-                        currentIndex++;
-                        setTimeout(writeNextCell, 60); 
-                    } else {
-                        progressBar.style.width = '100%';
-                        if (document.getElementById('splash-progress-text')) {
-                            document.getElementById('splash-progress-text').textContent = '100%';
-                        }
-                        
-                        setTimeout(() => {
-                            splashScreen.style.opacity = '0';
-                            setTimeout(() => {
-                                splashScreen.style.display = 'none';
-                                if (loginScreen) loginScreen.classList.remove('hidden');
-                            }, 500);
-                        }, 500);
-                    }
-                }
-
                 // ✨ 升級 4：在開始寫字前，先讓筆尖瞬間就位起點！
                 if (writingPath.length > 0) {
                     const [firstRow, firstCol] = writingPath[0];
@@ -238,12 +190,92 @@
                     pen.style.top = `${startY}%`;
                     
                     pen.offsetHeight; // 強制瀏覽器重繪 (Reflow)，記住這個位子
-                    
-                    pen.style.transition = 'all 0.06s linear'; // 把畫筆速度加回來
                 }
 
-                // 棋盤出來後，稍微等一下下再開始寫字
-                setTimeout(writeNextCell, 600);
+                // ==========================================
+                // ✨ 終極連動：由進度條的跳動，來指揮畫筆的狂暴速度！
+                // ==========================================
+                let currentProgress = 0;
+
+                function simulateRandomLoading() {
+                    if (currentProgress < 100) { 
+                        // 1. 隨機決定這次要跳多少 % (例如 3% ~ 12%)
+                        let jump = Math.floor(Math.random() * 4) + 3;
+                        currentProgress += jump;
+                        if (currentProgress > 100) currentProgress = 100;
+                        
+                        // 2. 更新進度條畫面 (同時更新數字與寬度)
+                        const progressBar = document.getElementById('splash-progress');
+                        const progressText = document.getElementById('splash-progress-text');
+                        if (progressBar) progressBar.style.width = `${currentProgress}%`;
+                        if (progressText) progressText.textContent = `${currentProgress}%`;
+
+                        // 3. 客觀計算：這個 % 對應應該要畫到第幾個格子 (100% 剛好對應 81 格)
+                        const targetIndex = Math.floor((currentProgress / 100) * totalSteps);
+                        const cellsToDraw = targetIndex - currentIndex;
+
+                        // 4. 隨機決定下一次「跳動」的間隔時間 (200ms ~ 500ms)
+                        const nextTick = Math.floor(Math.random() * 300) + 200; 
+
+                        if (cellsToDraw > 0) {
+                            // ✨ 核心動態速度物理學：分配到的時間 / 要畫的格數
+                            // 跳得多 (cellsToDraw 大) -> speedPerCell 變小 -> 畫超快！
+                            // 跳得少 (cellsToDraw 小) -> speedPerCell 變大 -> 慢慢畫！
+                            const speedPerCell = nextTick / cellsToDraw;
+                            
+                            function catchUpPen() {
+                                if (currentIndex < targetIndex && currentIndex < totalSteps) {
+                                    const [row, col] = writingPath[currentIndex];
+                                    const targetX = col * (100 / 9) + (100 / 18);
+                                    const targetY = row * (100 / 9) + (100 / 18);
+
+                                    // 動態調整 CSS 的 transition 速度，讓筆跡完美跟上真實的繪圖節奏
+                                    pen.style.transition = `all ${speedPerCell / 1000}s linear`;
+                                    pen.style.left = `${targetX}%`;
+                                    pen.style.top = `${targetY}%`;
+
+                                    const targetCell = document.getElementById(`splash-cell-${row * 9 + col}`);
+                                    if (targetCell) targetCell.classList.add('written');
+
+                                    currentIndex++;
+                                    
+                                    // 排程下一格
+                                    if (currentIndex < targetIndex) {
+                                        setTimeout(catchUpPen, speedPerCell);
+                                    } else {
+                                        // 這批進度畫完了，準備下一次跳動
+                                        if (currentProgress < 100) {
+                                            setTimeout(simulateRandomLoading, 20); // 微小延遲避免卡頓
+                                        } else {
+                                            finishLoading();
+                                        }
+                                    }
+                                }
+                            }
+                            catchUpPen(); // 啟動這批畫筆
+                        } else {
+                            // 如果這次跳太少，連一格都不到，就直接等下一次
+                            if (currentProgress < 100) {
+                                setTimeout(simulateRandomLoading, nextTick);
+                            } else {
+                                finishLoading();
+                            }
+                        }
+                    }
+                }
+
+                function finishLoading() {
+                    setTimeout(() => {
+                        splashScreen.style.opacity = '0';
+                        setTimeout(() => {
+                            splashScreen.style.display = 'none';
+                            if (loginScreen) loginScreen.classList.remove('hidden');
+                        }, 500);
+                    }, 1000);
+                }
+
+                // 稍微等棋盤顯示出來後，正式啟動連動動畫！
+                setTimeout(simulateRandomLoading, 600);
             }
         });
 </script>

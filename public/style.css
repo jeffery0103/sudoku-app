@@ -331,39 +331,45 @@ button,
     transition: opacity 1.5s ease-in-out, transform 1.5s ease-in-out;
 }
 
-/* ✨ 調整進度條容器：往下移、變粗 */
+/* ✨ 調整進度條容器：這是最外層的保護殼 */
 .splash-progress-container {
     position: absolute; 
-    bottom: -40px; /* 往下移動，不再跟棋盤貼緊緊 */
+    bottom: -45px; /* 往下移一點，避免太擠 */
     width: 100%; 
-    height: 18px; /* 變粗，從原本的 10px 加大到 18px */
-    background-color: rgba(93, 83, 74, 0.1); 
-    border-radius: 10px; /* 圓角稍微加大以配合變粗的進度條 */
     display: flex; 
     align-items: center; 
     justify-content: space-between; 
-    padding: 0 8px;
+    gap: 10px; /* 讓文字跟軌道保持舒適距離 */
 }
 
-/* ✨ 完美融合版：放大字體 + 專業等寬不跳動防護 */
+/* ✨ 極限模式專屬的「軌道」外觀 (取代你原本的 splash-progress-container 裡面的背景色設定) */
+.splash-progress-track {
+    flex-grow: 1; /* 軌道負責佔滿剩下的空間 */
+    height: 14px; /* 軌道的高度 */
+    background-color: #eae4dd;
+    border-radius: 7px;
+    border: 1px solid var(--border-color);
+    overflow: hidden; /* 確保裡面的實體條不會超出圓角 */
+}
+
+/* ✨ 填滿軌道的實體進度條 */
+.splash-progress-bar { 
+    width: 0%; /* 初始寬度 0，交給 JS 來控制 */
+    height: 100%; /* 高度填滿軌道 */
+    background-color: var(--text-primary); 
+    border-radius: 6px; 
+    transition: width 0.1s linear; 
+    /* 💥 刪除你原本寫在這裡的 flex-grow: 1; 跟 margin-right: 10px; 讓 width 屬性能發揮作用！ */
+}
+
+/* ✨ 文字樣式保持等寬防跳動 */
 .splash-progress-text {
-    font-size: 16px;         /* 依照你剛剛的要求放大，確保手機上也清楚 */
+    font-size: 16px;         
     color: var(--text-primary);
     font-weight: bold;
-    font-family: monospace;  /* ✨ 保留你的巧思：使用等寬字體，防止數字跳動 */
-    min-width: 45px;         /* ✨ 因為字體放大了，最小寬度拉寬到 45px (剛好塞下 100%)，防止排版晃動 */
+    font-family: monospace;  
+    min-width: 45px;         
     text-align: right;
-    margin-left: 12px;       /* 保持跟進度條的一點點距離 */
-}
-
-/* ✨ 修改：進度條本身，不要寫死 width 100%，改用 flex-grow */
-.splash-progress-bar { 
-    width: 0%; /* 初始為 0 */
-    height: 5px; /* ✨ 高度比容器矮一點，呈現凹槽感 */
-    background-color: var(--text-primary); 
-    border-radius: 4px; 
-    transition: width 0.1s linear; 
-    flex-grow: 1; /* ✨ 自動佔滿剩餘空間 */
-    margin-right: 10px; /* ✨ 跟右邊數字保持距離 */
+    margin: 0; /* 移除舊邊距，交給 gap 處理 */
 }
 
