@@ -270,7 +270,7 @@ module.exports = function(io, sudokuGame, rooms, pendingJoinRequests, activeSudo
         }
 
         const roomId = generateRoomId();
-        const newPlayer = { id: socket.id, name: playerName, isHost: true, isReady: false };
+        const newPlayer = { id: socket.id, name: playerName, isHost: true, isReady: true };
         rooms[roomId] = {
             id: roomId, players: [newPlayer], status: "waiting", gameType: gameType,
             isSinglePlayer: !!isSinglePlayer, gameState: {}, rematchRequests: new Set(), readyForSetup: new Set(),
@@ -311,8 +311,16 @@ module.exports = function(io, sudokuGame, rooms, pendingJoinRequests, activeSudo
 
                     socket.emit('reconnectionSuccess', {
                         gameType: room.gameType,
-                        gameState: room.gameState,
-                        roomId: roomId // 順便把 roomId 傳給前端印日誌
+                        gameState: room.gameState, // 依然保留原始遊戲資訊 (時間、難度等)
+                        roomId: roomId,
+                        // ✨ 核心修正：打包該玩家專屬的進度與工具狀態！
+                        playerData: {
+                            currentPuzzle: player.currentPuzzle,
+                            pencilMarks: player.pencilMarks,
+                            hintCount: player.hintCount,
+                            validateCount: player.validateCount,
+                            pauseUses: player.pauseUses
+                        }
                     });
                 }
             }
@@ -347,7 +355,7 @@ module.exports = function(io, sudokuGame, rooms, pendingJoinRequests, activeSudo
             id: socket.id, 
             name: playerName || "匿名玩家", 
             isHost: false, 
-            isReady: false 
+            isReady: true 
         };
         
         room.players.push(newPlayer);
@@ -403,11 +411,16 @@ module.exports = function(io, sudokuGame, rooms, pendingJoinRequests, activeSudo
             room.players.forEach(p => {
                 p.status = 'waiting';
                 p.currentPuzzle = null;
-                p.isReady = false;
+                // ✨ 核心邏輯：房主發起時自己就是 true，其他人強制作為 false (等待考慮中)
+                p.isReady = (p.id === socket.id); 
             });
             // 通知其他人房主邀請重玩
             socket.to(roomId).emit('sudoku_rematch_requested');
-            io.to(roomId).emit('updateRoomPlayers', { players: room.players.map(p => ({id: p.id, name: p.name, isHost: p.isHost})) });
+            
+            // 廣播時，記得把 isReady 一起打包傳給前端！
+            io.to(roomId).emit('updateRoomPlayers', { 
+                players: room.players.map(p => ({id: p.id, name: p.name, isHost: p.isHost, isReady: p.isReady})) 
+            });
         }
     });
 
@@ -415,7 +428,13 @@ module.exports = function(io, sudokuGame, rooms, pendingJoinRequests, activeSudo
     socket.on('sudoku_accept_rematch', ({ roomId }) => {
         const room = rooms[roomId];
         if (room) {
-            io.to(roomId).emit('updateRoomPlayers', { players: room.players.map(p => ({id: p.id, name: p.name, isHost: p.isHost})) });
+            const player = room.players.find(p => p.id === socket.id);
+            if (player) player.isReady = true; // ✨ 玩家按下接受，狀態改為已就緒
+            
+            // 廣播給所有人，讓房主的開始按鈕亮起來！
+            io.to(roomId).emit('updateRoomPlayers', { 
+                players: room.players.map(p => ({id: p.id, name: p.name, isHost: p.isHost, isReady: p.isReady})) 
+            });
         }
     });
 

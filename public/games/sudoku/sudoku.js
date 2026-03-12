@@ -330,7 +330,6 @@ function isBoardFull() {
     const meInNewList = players.find((p) => p.id === myPlayerId);
     iAmHost = meInNewList ? meInNewList.isHost : false;
 
-    // ✨ 核心修復 2：加上安全鎖，只有在「大廳等待」時，晉升房主才需要重繪等待畫面！
     const waitingPanel = document.getElementById('multiplayer-waiting-panel');
     const isLobby = waitingPanel && !waitingPanel.classList.contains('hidden');
     
@@ -338,25 +337,28 @@ function isBoardFull() {
         showWaitingScreen(currentGameId);
     }
 
+    // ✨ 計算目前「真正準備好」的玩家人數 (如果伺服器沒傳 isReady，就寬容當作 true)
+    const readyPlayersCount = players.filter(p => p.isReady !== false).length;
+
     const startGameBtn = document.getElementById("sudoku-start-game-btn");
     if (startGameBtn) {
       if (iAmHost) {
         startGameBtn.classList.remove("hidden");
-        startGameBtn.disabled = players.length < 2;
+        // 必須大於等於2個「已就緒」的人才能按
+        startGameBtn.disabled = readyPlayersCount < 2; 
       } else {
         startGameBtn.classList.add("hidden");
       }
     }
 
-    // ✨ 同步更新棋盤內建開始按鈕 (防呆 + 大地色恢復)
     const boardStartBtn = document.getElementById("board-start-game-btn");
     if (boardStartBtn) {
-        if (players.length < 2) {
+        if (readyPlayersCount < 2) {
             boardStartBtn.disabled = true;
             boardStartBtn.style.backgroundColor = "#95a5a6"; // 灰色
             boardStartBtn.style.borderColor = "#7f8c8d";
             boardStartBtn.style.cursor = "not-allowed";
-            boardStartBtn.textContent = "等待對手加入...";
+            boardStartBtn.textContent = "等待對手確認...";
         } else {
             boardStartBtn.disabled = false;
             boardStartBtn.style.backgroundColor = "#aa8b19"; // 恢復大地色
@@ -382,13 +384,21 @@ function isBoardFull() {
       playerItem.className = "player-list-item";
       const playerNameSpan = document.createElement("span");
       playerNameSpan.textContent = player.name + (player.id === myPlayerId ? " (你)" : "");
+      
       const playerStatusSpan = document.createElement("span");
       playerStatusSpan.className = "player-status";
-      if (player.isHost) {
-        playerStatusSpan.textContent = "(房主)";
+      
+      // ✨ 根據 isReady 狀態給予房主明確的視覺回饋
+      let statusText = player.isHost ? "(房主)" : "(挑戰者)";
+      if (player.isReady === false) {
+          statusText += " - ⏳ 考慮中...";
+          playerStatusSpan.style.color = "#e67e22"; // 橘黃色警告
       } else {
-        playerStatusSpan.textContent = "(挑戰者)";
+          statusText += " - ✅ 已就緒";
+          playerStatusSpan.style.color = "#27ae60"; // 綠色通行
       }
+      
+      playerStatusSpan.textContent = statusText;
       playerItem.appendChild(playerNameSpan);
       playerItem.appendChild(playerStatusSpan);
       playerListContainer.appendChild(playerItem);
@@ -1126,42 +1136,30 @@ function isBoardFull() {
   }
 
   async function checkWinCondition() {
-    if (isBoardFull()) {
-      try {
-        const response = await fetch("/api/sudoku/check-win", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            gameId: currentGameId,
-            puzzle: puzzle.map((row) => row.map((cell) => cell.value)),
-          }),
-        });
+    // 1. 如果盤面沒滿，或者已經完成，就不需要檢查
+    if (!isBoardFull() || iHaveFinished) return;
 
-        if (!response.ok) {
-          throw new Error(`API request failed with status ${response.status}`);
-        }
-        
-        const data = await response.json();
+    // ✨ 2. 核心分流：多人模式全權交給 WebSocket 伺服器判定！完全不走 HTTP API！
+    if (gameMode === 'multiplayer') return; 
 
-        if (data.isCorrect) {
-          // 【核心修正】標記為完成，並重新呼叫更新進度，讓進度條補滿最後的 100%
-          iHaveFinished = true;
-          updateProgress();
-          
-          socket.emit('sudoku_playerAction', {
-              roomId: currentGameId,
-              puzzle: puzzle.map(row => row.map(cell => cell.value)),
-              pencilMarks: pencilMarksData.map(row => row.map(set => Array.from(set)))
-          });
-          showWinModal();
-        } else {
-          showCustomAlert("您已填滿所有格子，但答案包含錯誤。");
-          validateBoard(true); // 自動幫玩家標示錯誤
+    // 👤 3. 單人模式：繼續使用原本的 API 檢查邏輯
+    try {
+      const response = await fetch(`/api/sudoku/solution/${currentGameId}`);
+      if (!response.ok) throw new Error("API 異常");
+      const data = await response.json();
+      
+      if (isBoardCorrect(puzzle, data.solution)) {
+        if (!iHaveFinished) {
+            iHaveFinished = true;
+            updateProgress();
+            showWinModal(); 
         }
-      } catch (error) {
-        console.error("判斷勝利時發生錯誤:", error);
-        showCustomAlert("無法確認勝利狀態，請稍後再試。");
+      } else {
+        showCustomAlert("您已填滿所有格子，但答案包含錯誤。");
+        validateBoard(true); 
       }
+    } catch (error) {
+      console.error("單人模式判斷勝利時發生錯誤:", error);
     }
   }
 
@@ -1185,36 +1183,41 @@ function isBoardFull() {
     stopTimer();
     disableGameControls(true, ['game-menu-btn']);
     
+    // ✨ 核心修復：把所有需要的 DOM 元素宣告，全部搬到函式最頂端！
+    const winModalExtremeBtn = document.getElementById('win-modal-extreme-challenge-btn');
+    const exitRoomBtn = document.getElementById('win-modal-exit-room-btn');
+    const winTitle = document.getElementById('win-modal-title');
+    const winSubtitle = document.getElementById('win-modal-subtitle');
+    const winStatContainer = document.getElementById('win-stats-container');
+
     // ==========================================
-    // ⚔️ 多人模式專屬邏輯 (攔截防護)
+    // ⚔️ 多人模式專屬邏輯
     // ==========================================
     if (gameMode === 'multiplayer') {
         const othersPlaying = opponentStates.some(p => p.playerId !== myPlayerId && p.status === 'playing');
 
-        // ✨ 煙火照放，慶祝通關！
+        // 煙火照放，慶祝通關！
         if (typeof confetti === "function") confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } });
 
         if (othersPlaying) {
             // 情況 A：還有人在玩。隱藏彈窗，並跳出觀戰通知
             if (winModalNewGameBtn) winModalNewGameBtn.classList.add("hidden");
+            
+            // 💡 現在這裡絕對找得到這兩個變數，不會再崩潰了！
             if (winModalExtremeBtn) winModalExtremeBtn.classList.add("hidden");
             if (exitRoomBtn) exitRoomBtn.classList.add("hidden");
+            
             if (winModalOverlay) winModalOverlay.classList.add("hidden");
             
             showCustomAlert("恭喜通關！🎉<br>還有其他對手正在努力中，您可以點擊右下角的進度條切換視角進行觀戰喔！", "通關成功");
-        } else {
-            // 情況 B：沒人在玩了（我是最後一個）。
-            // 🛑 核心防護：什麼都不要做！把 HTML 與彈窗控制權全部讓給 sudoku_gameOver 廣播！
-        }
+        } 
         
-        return; // ⚠️ 多人模式到此結束，絕對不執行下方的單人邏輯
+        return; // 多人模式到此結束
     }
 
     // ==========================================
-    // 👤 以下全部都是「單人模式」專屬邏輯
+    // 👤 以下為「單人模式」專屬邏輯
     // ==========================================
-    const winTitle = document.getElementById('win-modal-title');
-    const winSubtitle = document.getElementById('win-modal-subtitle');
     if (winTitle) winTitle.textContent = "恭喜通關！";
     if (winSubtitle) winSubtitle.classList.remove("hidden");
 
@@ -1226,8 +1229,6 @@ function isBoardFull() {
     const hintsUsed = initialHintCount - hintCount;
     const validationsUsed = initialValidateCount - validateCount;
 
-    // 這裡才把單人數據塞進去，保證不會蓋掉多人的排行榜！
-    const winStatContainer = document.getElementById('win-stats-container');
     if (winStatContainer) {
         winStatContainer.innerHTML = `
             <div class="win-stat-item"><span class="stat-label">遊戲難度:</span><span class="stat-value">${difficultyText}</span></div>
@@ -1237,9 +1238,6 @@ function isBoardFull() {
             <div class="win-stat-item"><span class="stat-label">使用檢查:</span><span class="stat-value">${validationsUsed} 次</span></div>
         `;
     }
-
-    const winModalExtremeBtn = document.getElementById('win-modal-extreme-challenge-btn');
-    const exitRoomBtn = document.getElementById('win-modal-exit-room-btn');
 
     if (winModalNewGameBtn) {
         winModalNewGameBtn.classList.remove("hidden");
@@ -2300,9 +2298,18 @@ function setupEventListeners() {
         opponentStates = fullPlayerState;
         updateOpponentProgressUI();
         updatePauseButtonState();
+        
         const myState = fullPlayerState.find(p => p.playerId === myPlayerId);
 
         if (myState) {
+            // ✨ 終極防護：接收伺服器的通關認證！
+            // 如果伺服器判定我完成了，但我本地還沒觸發通關流程，就立刻觸發！
+            if (myState.status === 'finished' && !iHaveFinished) {
+                iHaveFinished = true;
+                updateProgress(); // 確保進度條達到 100%
+                showWinModal();   // 🎆 放煙火與跳出繼續觀戰通知
+            }
+
             myCurrentStatus = myState.status;
             hintCount = myState.hintCount;
             validateCount = myState.validateCount;
@@ -2313,7 +2320,6 @@ function setupEventListeners() {
             
             if (menuRestartBtn) {
                 if (myCurrentStatus === 'playing') {
-                    // 檢查是否只剩我一個人在玩
                     const activePlayers = fullPlayerState.filter(p => p.status === 'playing').length;
                     if (activePlayers === 1 && fullPlayerState.length > 1) {
                         menuRestartBtn.textContent = '放棄遊戲';
@@ -2321,14 +2327,12 @@ function setupEventListeners() {
                         menuRestartBtn.textContent = '投降';
                     }
                 } else {
-                    menuRestartBtn.textContent = '退出房間'; // ✨ 投降後改為退出房間
+                    menuRestartBtn.textContent = '退出房間'; 
                 }
             }
         }
     });
 
-
-    
 
     socket.on('sudoku_dispatch_progress', ({ progress }) => {
         const percentageSpan = document.getElementById("generation-progress-percentage");
@@ -3148,24 +3152,66 @@ socket.on('sudoku_storm_hit', ({ r, c, mark }) => {
   
 
   socket.on('reconnectionSuccess', (data) => {
-      // ✨ 升級版 F12 瀏覽器日誌
       console.log(`%c[斷線保護] 🎊 重連成功！伺服器已核准身分。`, `color: #28a745; font-weight: bold; font-size: 1.1em;`);
       console.log(`%c ➜ 正在恢復至房間 ${data.roomId} 的遊戲狀態...`, `color: #007bff;`);
-      console.log(`%c ➜ 我當前的新 Socket ID: ${myPlayerId}`, `color: #6c757d;`);
-      
       
       gameMode = 'multiplayer';
       currentGameId = data.roomId;
       
+      // 1. 恢復 UI 面板
       appContainer.classList.remove('hidden');
       sudokuModeModalOverlay.classList.add('hidden');
       difficultyModalOverlay.classList.add('hidden');
       setUIState('playing_multiplayer');
       
-      if(data.gameState && data.gameState.puzzle) {
-        newGame(data.gameState.puzzle);
-        updateOpponentProgressUI(data.players);
-        updateTimerDisplay(data.gameState.seconds);
+      if (data.gameState && data.gameState.puzzle && data.playerData) {
+          // 2. 恢復初始盤面與難度設定
+          initialPuzzle = JSON.parse(JSON.stringify(data.gameState.puzzle.map(row => row.map(num => ({ value: num, source: num !== 0 ? "initial" : "empty" })))));
+          
+          if (data.gameState.difficulty) {
+              applyDifficultySettings(data.gameState.difficulty, data.gameState.holes);
+          }
+
+          // 3. ✨ 核心修復：精準注入玩家的私人進度
+          const pd = data.playerData;
+          puzzle = JSON.parse(JSON.stringify(pd.currentPuzzle));
+          
+          // 恢復筆記 (將陣列轉回 Set)
+          pencilMarksData = pd.pencilMarks.map(row => row.map(arr => new Set(arr)));
+
+          // 恢復工具使用狀態
+          hintCount = pd.hintCount;
+          validateCount = pd.validateCount;
+          
+          const pauseCountDisplay = document.getElementById('info-pause-count-display');
+          if (pauseCountDisplay) pauseCountDisplay.textContent = pd.pauseUses;
+
+          // 4. 重置環境變數與歷史紀錄 (建立第一個快照)
+          iHaveSurrendered = false;
+          iHaveFinished = false;
+          currentlySpectatingId = null;
+          isPaused = false;
+          history = [];
+          historyIndex = -1;
+          selectedCell = null;
+          lastSelectedCoords = null;
+          myCurrentStatus = 'playing';
+          
+          if (pauseBtn) pauseBtn.textContent = "暫停";
+          
+          // 建立第一筆歷史紀錄 (讓 Undo 可以回到重連當下的狀態)
+          recordHistoryState(null);
+          
+          // 5. 重新繪製畫面與啟動計時器
+          drawBoard();
+          highlightAndCheckConflicts();
+          updateProgress();
+          updateNumberCounter();
+          updateGameInfo();
+          updateTimerDisplay(data.gameState.seconds);
+          isTimerRunning = true;
+          disableGameControls(false);
+          updatePauseButtonState();
       }
   });
 
