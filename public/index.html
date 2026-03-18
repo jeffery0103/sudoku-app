@@ -218,7 +218,7 @@
                         const nextTick = Math.floor(Math.random() * 300) + 200; 
 
                         if (cellsToDraw > 0) {
-                            // ✨ 核心動態速度物理學：分配到的時間 / 要畫的格數
+                            // 核心動態速度物理學：分配到的時間 / 要畫的格數
                             // 跳得多 (cellsToDraw 大) -> speedPerCell 變小 -> 畫超快！
                             // 跳得少 (cellsToDraw 小) -> speedPerCell 變大 -> 慢慢畫！
                             const speedPerCell = nextTick / cellsToDraw;

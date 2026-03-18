@@ -121,7 +121,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     myPlayerName = name;
     
-    // ✨ 加上安全檢查，避免抓不到元件導致程式崩潰
+    //  加上安全檢查，避免抓不到元件導致程式崩潰
     if (displayPlayerNameSpan) {
       displayPlayerNameSpan.textContent = myPlayerName;
     } else if (playerInfoDisplay) {
