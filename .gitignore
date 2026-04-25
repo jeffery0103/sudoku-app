@@ -1,2 +1,10 @@
-node_modules
+node_modules/
 dist/
+# 排除 Windows 專用的腳本，因為 Linux 用不到
+*.bat
+*.ps1
+# 排除 OS 產生的雜物
+.DS_Store
+Thumbs.db
+# 排除敏感資訊（如果你之後有用到 API Key 或密碼的話）
+.env
