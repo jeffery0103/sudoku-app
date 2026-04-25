@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 // 直接引入你寫好的核心邏輯
-const sudokuServer = require('./server/sudoku_server.js');
+const sudokuServer = require('./server/games/sudoku_server.js');
 
 const DB_FILE = path.join(__dirname, 'hard_puzzles_db.json');
 const TARGET_HOLES = 60; // 俊佑指定的骨灰級難度門檻
