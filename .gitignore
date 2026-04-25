@@ -8,3 +8,5 @@ dist/
 Thumbs.db
 # 排除敏感資訊（如果你之後有用到 API Key 或密碼的話）
 .env
+# 忽略礦工產生的題庫，避免與 Git 同步發生衝突
+hard_puzzles_db.json
